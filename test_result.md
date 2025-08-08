@@ -115,3 +115,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Please run backend tests for all new endpoints as per the test_plan; no frontend tests yet until user confirms."
+  - agent: "testing"
+    message: "Backend testing completed successfully. All core API endpoints are working correctly: health check, root endpoint, rewards store with seeding, active quest CRUD operations, quest completion with proper XP calculation (75 XP for Epic rank), XP summary with earned/spent/balance tracking, reward redemption with XP validation, recurring task creation and daily generation, and rules storage/retrieval. Fixed critical date serialization issues for MongoDB compatibility. The backend is ready for frontend integration."
