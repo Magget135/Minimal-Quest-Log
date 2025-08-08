@@ -145,7 +145,11 @@ async def create_active_quest(input: ActiveQuestCreate):
         raise HTTPException(status_code=400, detail="Invalid quest_rank")
     if input.status not in STATUS_OPTIONS:
         raise HTTPException(status_code=400, detail="Invalid status")
-    await db.ActiveQuests.insert_one(input.dict())
+    quest_data = input.dict()
+    # Convert date to string for MongoDB storage
+    if 'due_date' in quest_data and isinstance(quest_data['due_date'], date):
+        quest_data['due_date'] = quest_data['due_date'].isoformat()
+    await db.ActiveQuests.insert_one(quest_data)
     return input
 
 @api_router.patch("/quests/active/{quest_id}", response_model=ActiveQuest)
