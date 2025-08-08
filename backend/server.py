@@ -326,8 +326,9 @@ class RecurringUpsert(BaseModel):
     id: Optional[str] = None
     task_name: str
     quest_rank: Literal['Common', 'Rare', 'Epic', 'Legendary']
-    frequency: Literal['Daily', 'Weekly', 'Weekdays', 'Monthly']
+    frequency: Literal['Daily', 'Weekly', 'Weekdays', 'Monthly', 'Annual']
     days: Optional[str] = None
+    monthly_on_date: Optional[int] = None
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
 
 @api_router.post("/recurring", response_model=RecurringTask)
