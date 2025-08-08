@@ -532,7 +532,9 @@ async def run_recurring_generation():
             )
             quest_data = serialize_dates_for_mongo(new_q.dict())
             await db.ActiveQuests.insert_one(quest_data)
-            await db.Recurringtasks.update_one({"id": t['id']}, {"$set": {"last_added": today.isoformat()}})
+            # bump counters/last_added
+            updates = {"last_added": today.isoformat(), "occurrences": int(t.get('occurrences') or 0) + 1}
+            await db.Recurringtasks.update_one({"id": t['id']}, {"$set": updates})
             created_count += 1
     return {"created": created_count}
 
