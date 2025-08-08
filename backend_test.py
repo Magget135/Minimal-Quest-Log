@@ -564,6 +564,7 @@ class QuestTrackerTester:
             self.test_rewards_log,
             self.test_recurring_tasks,
             self.test_rules,
+            self.test_due_time_regression,
             self.test_edge_cases
         ]
         
