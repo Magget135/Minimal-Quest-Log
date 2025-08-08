@@ -437,11 +437,6 @@ async def delete_recurring(task_id: str):
         raise HTTPException(status_code=404, detail="Recurring task not found")
     return {"ok": True}
 
-# Helper to parse weekly days like 'Mon, Fri'
-WEEKDAY_INDEX = {
-    'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6
-}
-
 def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
     freq = task.get('frequency')
     if freq == 'Daily':
