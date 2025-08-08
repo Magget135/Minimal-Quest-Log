@@ -78,6 +78,17 @@ backend:
       - working: true
         agent: "testing"
         comment: "Comprehensive rewards inventory end-to-end testing completed successfully. All 8 test steps passed: 1) Created and completed Common quest for 25 XP, 2) Retrieved rewards store and found $1 Credit (25 XP), 3) Successfully redeemed $1 Credit with inventory item (used=false), 4) Verified new item appears at top of inventory with used=false, 5) Successfully used inventory item, 6) Verified item marked as used=true with used_at timestamp, 7) Confirmed redemption log entry exists, 8) Edge case: correctly rejected attempt to use already used item with 400 error. No 5xx errors found in backend logs."
+  - task: "New backend endpoints and fields validation"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Review validation completed successfully. All 5 specific tests passed: 1) Create active quest with duration_minutes=90 and verify field persists in GET /api/quests/active ✅, 2) PATCH /api/quests/active/{id} to change due_time=16:45 and duration_minutes=120, verified ✅, 3a) PUT /api/quests/active/{id}/recurrence with Weekly config (Mon,Wed,Fri), then GET returns same config ✅, 3b) DELETE /api/quests/active/{id}/recurrence?delete_rule=true unlinks quest and deletes rule; GET returns null and rule removed from Recurringtasks ✅, 4) POST /api/recurring/run works and sets recurring_id on generated quests ✅. Fixed TypeError in is_today_for_task function where start_date string wasn't being converted to date object. No 5xx errors detected after fix."
 frontend:
   - task: "Calendar minimal UI adjustments (headers, month/year left, tasks containment)"
     implemented: true
