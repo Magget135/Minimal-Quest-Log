@@ -277,7 +277,7 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete }){
   );
 }
 
-function ActiveQuests(){
+function ActiveQuests({ hideExtras=false }){
   const api = useApi();
   const { summary, refresh: refreshXP } = useXPSummary();
   const [list, setList] = useState([]);
