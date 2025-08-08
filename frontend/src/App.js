@@ -259,7 +259,7 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
     const startMin = snapMin(pxToMin(y));
     setDraft({ top: startMin * MINUTE_PX, height: SNAP_MIN * MINUTE_PX, startMin, duration: SNAP_MIN });
 
-    const onMove = (ev) => {
+    const onMove = (ev) => { movedRef.current = true;
       const yy = Math.max(0, Math.min(rect.height, ev.clientY - rect.top));
       const curMin = snapMin(pxToMin(yy));
       const dur = Math.max(SNAP_MIN, curMin - startMin);
