@@ -499,6 +499,177 @@ class QuestTrackerTester:
             self.log_test("due_time regression complete", False, f"Only {success_count}/{expected_tests} due_time tests passed")
             return False
 
+    def test_rewards_inventory_end_to_end(self):
+        """Test new rewards inventory APIs and existing redeem behavior end-to-end"""
+        print("\n🎁 Testing Rewards Inventory End-to-End Flow...")
+        success_count = 0
+        total_tests = 8
+        inventory_item_id = None
+        
+        try:
+            # Step 1: Ensure XP balance by creating and completing a Common quest (25 XP)
+            print("   Step 1: Creating and completing Common quest for XP...")
+            today = date.today().isoformat()
+            quest_data = {
+                "quest_name": "Test Quest for XP",
+                "quest_rank": "Common",
+                "due_date": today,
+                "status": "Pending"
+            }
+            create_response = self.session.post(f"{self.base_url}/quests/active", json=quest_data)
+            if create_response.status_code == 200:
+                quest_id = create_response.json().get("id")
+                complete_response = self.session.post(f"{self.base_url}/quests/active/{quest_id}/complete")
+                if complete_response.status_code == 200 and complete_response.json().get("xp_earned") == 25:
+                    self.log_test("Step 1: Ensure XP balance (Common quest)", True, "Created and completed Common quest for 25 XP")
+                    success_count += 1
+                else:
+                    self.log_test("Step 1: Ensure XP balance (Common quest)", False, f"Quest completion failed: {complete_response.status_code}")
+            else:
+                self.log_test("Step 1: Ensure XP balance (Common quest)", False, f"Quest creation failed: {create_response.status_code}")
+                
+            # Step 2: GET /api/rewards/store and pick "$1 Credit" (25 XP)
+            print("   Step 2: Getting rewards store and selecting $1 Credit...")
+            store_response = self.session.get(f"{self.base_url}/rewards/store")
+            if store_response.status_code == 200:
+                store_items = store_response.json()
+                credit_reward = None
+                for item in store_items:
+                    if item.get("reward_name") == "$1 Credit" and item.get("xp_cost") == 25:
+                        credit_reward = item
+                        break
+                        
+                if credit_reward:
+                    self.log_test("Step 2: GET rewards store and find $1 Credit", True, f"Found $1 Credit reward costing 25 XP")
+                    success_count += 1
+                    chosen_reward_id = credit_reward.get("id")
+                else:
+                    self.log_test("Step 2: GET rewards store and find $1 Credit", False, "Could not find $1 Credit reward")
+                    return False
+            else:
+                self.log_test("Step 2: GET rewards store and find $1 Credit", False, f"Store request failed: {store_response.status_code}")
+                return False
+                
+            # Step 3: POST /api/rewards/redeem with chosen reward_id
+            print("   Step 3: Redeeming $1 Credit reward...")
+            redeem_data = {"reward_id": chosen_reward_id}
+            redeem_response = self.session.post(f"{self.base_url}/rewards/redeem", json=redeem_data)
+            if redeem_response.status_code == 200:
+                redeem_result = redeem_response.json()
+                if (redeem_result.get("reward_name") == "$1 Credit" and 
+                    redeem_result.get("xp_cost") == 25 and 
+                    redeem_result.get("used") is False):
+                    inventory_item_id = redeem_result.get("id")
+                    self.log_test("Step 3: POST rewards redeem", True, f"Successfully redeemed $1 Credit, inventory ID: {inventory_item_id}")
+                    success_count += 1
+                else:
+                    self.log_test("Step 3: POST rewards redeem", False, f"Redeem result incorrect: {redeem_result}")
+            else:
+                self.log_test("Step 3: POST rewards redeem", False, f"Redeem failed: {redeem_response.status_code}, {redeem_response.text}")
+                
+            # Step 4: GET /api/rewards/inventory - expect new item at top with used=false
+            print("   Step 4: Checking rewards inventory...")
+            inventory_response = self.session.get(f"{self.base_url}/rewards/inventory")
+            if inventory_response.status_code == 200:
+                inventory_items = inventory_response.json()
+                if inventory_items and len(inventory_items) > 0:
+                    top_item = inventory_items[0]  # Should be sorted by date_redeemed desc
+                    if (top_item.get("id") == inventory_item_id and 
+                        top_item.get("reward_name") == "$1 Credit" and
+                        top_item.get("used") is False and
+                        top_item.get("used_at") is None):
+                        self.log_test("Step 4: GET rewards inventory", True, f"Found new item at top with used=false")
+                        success_count += 1
+                    else:
+                        self.log_test("Step 4: GET rewards inventory", False, f"Top item incorrect: {top_item}")
+                else:
+                    self.log_test("Step 4: GET rewards inventory", False, "Inventory is empty")
+            else:
+                self.log_test("Step 4: GET rewards inventory", False, f"Inventory request failed: {inventory_response.status_code}")
+                
+            # Step 5: POST /api/rewards/use/{inventory_id} - expect ok true
+            print("   Step 5: Using the inventory item...")
+            if inventory_item_id:
+                use_response = self.session.post(f"{self.base_url}/rewards/use/{inventory_item_id}")
+                if use_response.status_code == 200:
+                    use_result = use_response.json()
+                    if use_result.get("ok") is True:
+                        self.log_test("Step 5: POST rewards use", True, f"Successfully used inventory item")
+                        success_count += 1
+                    else:
+                        self.log_test("Step 5: POST rewards use", False, f"Use result incorrect: {use_result}")
+                else:
+                    self.log_test("Step 5: POST rewards use", False, f"Use failed: {use_response.status_code}, {use_response.text}")
+            else:
+                self.log_test("Step 5: POST rewards use", False, "No inventory item ID available")
+                
+            # Step 6: GET /api/rewards/inventory again - item should show used=true with used_at
+            print("   Step 6: Verifying item is marked as used...")
+            inventory_response2 = self.session.get(f"{self.base_url}/rewards/inventory")
+            if inventory_response2.status_code == 200:
+                inventory_items2 = inventory_response2.json()
+                used_item = None
+                for item in inventory_items2:
+                    if item.get("id") == inventory_item_id:
+                        used_item = item
+                        break
+                        
+                if used_item:
+                    if (used_item.get("used") is True and 
+                        used_item.get("used_at") is not None):
+                        self.log_test("Step 6: Verify item marked as used", True, f"Item correctly marked as used with used_at timestamp")
+                        success_count += 1
+                    else:
+                        self.log_test("Step 6: Verify item marked as used", False, f"Item not marked as used: used={used_item.get('used')}, used_at={used_item.get('used_at')}")
+                else:
+                    self.log_test("Step 6: Verify item marked as used", False, "Could not find the inventory item")
+            else:
+                self.log_test("Step 6: Verify item marked as used", False, f"Inventory request failed: {inventory_response2.status_code}")
+                
+            # Step 7: GET /api/rewards/log - ensure log entry exists
+            print("   Step 7: Checking rewards log for redemption entry...")
+            log_response = self.session.get(f"{self.base_url}/rewards/log")
+            if log_response.status_code == 200:
+                log_items = log_response.json()
+                credit_log_found = any(
+                    item.get("reward_name") == "$1 Credit" and item.get("xp_cost") == 25 
+                    for item in log_items
+                )
+                if credit_log_found:
+                    self.log_test("Step 7: GET rewards log", True, f"Found redemption log entry for $1 Credit")
+                    success_count += 1
+                else:
+                    self.log_test("Step 7: GET rewards log", False, f"No log entry found for $1 Credit redemption")
+            else:
+                self.log_test("Step 7: GET rewards log", False, f"Log request failed: {log_response.status_code}")
+                
+            # Step 8: Edge case - try using the same inventory ID again, expect 400
+            print("   Step 8: Testing edge case - using already used item...")
+            if inventory_item_id:
+                use_again_response = self.session.post(f"{self.base_url}/rewards/use/{inventory_item_id}")
+                if use_again_response.status_code == 400:
+                    error_text = use_again_response.text
+                    if "already used" in error_text.lower():
+                        self.log_test("Step 8: Edge case - use already used item", True, f"Correctly rejected with 400: {error_text}")
+                        success_count += 1
+                    else:
+                        self.log_test("Step 8: Edge case - use already used item", False, f"Wrong error message: {error_text}")
+                else:
+                    self.log_test("Step 8: Edge case - use already used item", False, f"Expected 400, got {use_again_response.status_code}")
+            else:
+                self.log_test("Step 8: Edge case - use already used item", False, "No inventory item ID available")
+                
+        except Exception as e:
+            self.log_test("Rewards inventory end-to-end test", False, f"Exception: {str(e)}")
+            
+        # Summary
+        if success_count == total_tests:
+            self.log_test("Rewards Inventory End-to-End Complete", True, f"All {success_count}/{total_tests} steps passed")
+            return True
+        else:
+            self.log_test("Rewards Inventory End-to-End Complete", False, f"Only {success_count}/{total_tests} steps passed")
+            return False
+
     def test_edge_cases(self):
         """Test edge cases: redeem more XP than available, delete reward"""
         success_count = 0
