@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import axios from "axios";
@@ -54,42 +54,28 @@ function useXPSummary(){
 
 // Date helpers
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const parseISODateOnly = (s) => { const [yy,mm,dd] = s.split('-').map(Number); return new Date(yy, mm-1, dd); };
 const startOfWeekMon = (d) => { const day = d.getDay(); const diff = (day === 0 ? -6 : 1) - day; const res = new Date(d); res.setDate(d.getDate()+diff); return new Date(res.getFullYear(), res.getMonth(), res.getDate()); };
 const addDays = (d, n) => { const res = new Date(d); res.setDate(d.getDate()+n); return res; };
+function startOfMonthGridMon(d){ const first = new Date(d.getFullYear(), d.getMonth(), 1); return startOfWeekMon(first); }
 
 const HOUR_HEIGHT = 48; // px
 const MINUTE_PX = HOUR_HEIGHT / 60; // 0.8px per min => 1152px height
 
 function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask}){
   let cells = [];
-  let header = "";
+  let header = anchorDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   if (view === 'week') {
     const start = startOfWeekMon(anchorDate);
-    header = `${start.toLocaleDateString()} - ${addDays(start,6).toLocaleDateString()}`;
-    for(let i=0;i<7;i++){
-      const day = addDays(start, i);
-      const key = ymd(day);
-      const items = tasks.filter(t => t.due_date === key);
-      cells.push({ day, items });
-    }
+    cells = Array.from({length:7}, (_,i)=> addDays(start,i));
   } else if (view === 'month') {
     const start = startOfMonthGridMon(anchorDate);
-    header = anchorDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-    for(let i=0;i<42;i++){
-      const day = addDays(start, i);
-      const key = ymd(day);
-      const items = tasks.filter(t => t.due_date === key);
-      cells.push({ day, items });
-    }
+    cells = Array.from({length:42}, (_,i)=> addDays(start,i));
   } else {
-    // day
-    const start = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
-    header = start.toDateString();
-    const key = ymd(start);
-    const items = tasks.filter(t => t.due_date === key);
-    cells.push({ day: start, items });
+    cells = [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())];
+    header = cells[0].toDateString();
   }
+
+  const weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   return (
     <div className="calendar">
@@ -106,19 +92,28 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
           <button className={`btn secondary`} onClick={()=>onViewChange('month')}>Month</button>
         </div>
       </div>
+      {view !== 'day' && (
+        <div className="month-headers">
+          {weekdays.map((w,i) => <div key={i} className="month-head-cell">{w}</div>)}
+        </div>
+      )}
       <div className={`calendar-grid ${view}`}>
-        {cells.map((c, idx) => (
-          <div key={idx} className="calendar-cell">
-            <div className="calendar-day-number">{c.day.getDate()}</div>
-            <div className="calendar-tasks">
-              {c.items.map(item => (
-                <div key={item.id} className="task-chip" title={item.quest_name} onClick={()=>onOpenTask(item)}>
-                  {item.quest_name}
-                </div>
-              ))}
+        {cells.map((day, idx) => {
+          const key = ymd(day);
+          const items = tasks.filter(t => t.due_date === key);
+          return (
+            <div key={idx} className="calendar-cell">
+              <div className="calendar-day-number">{day.getDate()}</div>
+              <div className="calendar-tasks">
+                {items.map(item => (
+                  <div key={item.id} className="task-chip" title={item.quest_name} onClick={()=>onOpenTask(item)}>
+                    {item.quest_name}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -145,42 +140,7 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
   });
 
   const hours = Array.from({length:24}, (_,i)=> i);
-
-  const timeLabels = (
-    <div className="time-labels">
-      {hours.map(h => (
-        <div key={h} className="time-hour">{h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`}</div>
-      ))}
-    </div>
-  );
-
-  const renderHourLines = () => (
-    hours.map(h => (
-      <div key={h} className="time-hour-line" style={{ top: h * HOUR_HEIGHT }} />
-    ))
-  );
-
-  const renderTaskBlock = (t) => {
-    const [hh, mm] = (t.due_time || "00:00").split(":").map(Number);
-    const top = (hh*60 + mm) * MINUTE_PX;
-    const height = Math.max(22, 30); // simple min height
-    return (
-      <div key={t.id} className="task-block" style={{ top, height }} title={t.quest_name} onClick={()=>onOpenTask(t)}>
-        {t.quest_name} {t.due_time ? `(${t.due_time})` : ''}
-      </div>
-    );
-  };
-
-  const nowLine = (day) => {
-    if (ymd(day) !== ymd(now)) return null;
-    const minutes = now.getHours()*60 + now.getMinutes();
-    const top = minutes * MINUTE_PX;
-    return (
-      <div className="time-now-line" style={{ top }}>
-        <div className="time-now-dot" />
-      </div>
-    );
-  };
+  const dayLabel = (d) => d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 
   return (
     <div className="time-calendar">
@@ -190,7 +150,7 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
           <button className="btn secondary" onClick={onToday}>Today</button>
           <button className="btn secondary" onClick={onNext}>Next</button>
         </div>
-        <div>{isWeek ? `${days[0].toLocaleDateString()} - ${days[6].toLocaleDateString()}` : days[0].toDateString()}</div>
+        <div>{isWeek ? `${days[0].toLocaleDateString()} - ${days[days.length-1].toLocaleDateString()}` : days[0].toDateString()}</div>
         <div className="time-controls">
           <button className={`btn secondary`} onClick={()=>onViewChange('day')}>Day</button>
           <button className={`btn secondary`} onClick={()=>onViewChange('week')}>Week</button>
@@ -198,31 +158,38 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
         </div>
       </div>
 
-      {/* All-day row */}
-      <div className="all-day">
-        <div className="col" style={{borderRight:'1px solid #f3f3f3', display:'flex', alignItems:'center', paddingLeft:8}}>
-          <span className="small">All-day</span>
-        </div>
-        {days.map(d => (
-          <div key={ymd(d)} className="col">
-            <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-              {byDate[ymd(d)].allDay.map(item => (
-                <div key={item.id} className="task-chip" onClick={()=>onOpenTask(item)}>{item.quest_name}</div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className={`time-wrap`}>
-        <div className={`time-grid ${isWeek ? 'week' : 'day'}`}>
-          {timeLabels}
+      <div className="time-scroll">
+        {/* Day headers */}
+        <div className={`day-headers ${isWeek ? 'week' : 'day'}`}>
+          <div className="day-head-cell" />
           {days.map(d => (
-            <div key={ymd(d)} className="time-col">
-              {renderHourLines()}
-              {byDate[ymd(d)].timed.map(renderTaskBlock)}
-              {nowLine(d)}
+            <div key={ymd(d)} className="day-head-cell">{dayLabel(d)}</div>
+          ))}
+        </div>
+
+        {/* All-day row */}
+        <div className={`all-day ${isWeek ? '' : 'day'}`}>
+          <div className="label">All-day</div>
+          {days.map(d => (
+            <div key={ymd(d)} className="col">
+              <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                {byDate[ymd(d)].allDay.map(item => (
+                  <div key={item.id} className="task-chip" onClick={()=>onOpenTask(item)}>{item.quest_name}</div>
+                ))}
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Time grid */}
+        <div className={`time-grid ${isWeek ? 'week' : 'day'}`}>
+          <div className="time-labels">
+            {hours.map(h => (
+              <div key={h} className="time-hour">{h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`}</div>
+            ))}
+          </div>
+          {days.map(d => (
+            <DayColumn key={ymd(d)} day={d} items={byDate[ymd(d)].timed} now={now} onOpenTask={onOpenTask} />
           ))}
         </div>
       </div>
@@ -230,7 +197,41 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
   );
 }
 
-function startOfMonthGridMon(d){ const first = new Date(d.getFullYear(), d.getMonth(), 1); return startOfWeekMon(first); }
+function DayColumn({ day, items, now, onOpenTask }){
+  const HOUR_HEIGHT = 48; const MINUTE_PX = HOUR_HEIGHT / 60;
+  const renderHourLines = () => Array.from({length:24}, (_,h) => (
+    <div key={h} className="time-hour-line" style={{ top: h * HOUR_HEIGHT }} />
+  ));
+  const renderTaskBlock = (t) => {
+    const [hh, mm] = (t.due_time || "00:00").split(":").map(Number);
+    const top = (hh*60 + mm) * MINUTE_PX;
+    const height = Math.max(22, 30);
+    return (
+      <div key={t.id} className="task-block" style={{ top, height }} title={t.quest_name} onClick={()=>onOpenTask(t)}>
+        {t.quest_name} {t.due_time ? `(${t.due_time})` : ''}
+      </div>
+    );
+  };
+  const nowLine = () => {
+    const todayKey = ymd(new Date());
+    if (ymd(day) !== todayKey) return null;
+    const n = new Date();
+    const minutes = n.getHours()*60 + n.getMinutes();
+    const top = minutes * MINUTE_PX;
+    return (
+      <div className="time-now-line" style={{ top }}>
+        <div className="time-now-dot" />
+      </div>
+    );
+  };
+  return (
+    <div className="time-col">
+      {renderHourLines()}
+      {items.map(renderTaskBlock)}
+      {nowLine()}
+    </div>
+  );
+}
 
 function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask }){
   if (view === 'month') {
@@ -270,7 +271,6 @@ function ActiveQuests(){
   const api = useApi();
   const { summary, refresh: refreshXP } = useXPSummary();
   const [list, setList] = useState([]);
-  const [rewards, setRewards] = useState([]); // reserved for global actions
 
   // calendar state
   const [view, setView] = useState('week'); // default 1 week
@@ -279,10 +279,7 @@ function ActiveQuests(){
   const [form, setForm] = useState({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
 
   const fetchAll = async () => {
-    const [q, r] = await Promise.all([
-      api.get(`/quests/active`),
-      api.get(`/rewards/store`),
-    ]);
+    const q = await api.get(`/quests/active`);
     // sort by due_date then due_time (empty first)
     const sorted = [...q.data].sort((a,b) => {
       const da = new Date(a.due_date + 'T00:00:00').getTime();
@@ -293,7 +290,6 @@ function ActiveQuests(){
       return ta.localeCompare(tb);
     });
     setList(sorted);
-    setRewards(r.data);
   };
 
   useEffect(() => { fetchAll(); }, []);

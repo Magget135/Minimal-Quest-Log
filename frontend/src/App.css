@@ -47,6 +47,11 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .calendar-tasks { display:flex; flex-direction:column; gap:6px; margin-top: 18px; }
 .task-chip { border:1px solid #e5e5e5; border-radius:999px; padding:4px 8px; background:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
 
+/* Month/Week day headers above grid */
+.month-headers { display:grid; grid-template-columns: repeat(7, 1fr); border-bottom:1px solid #e5e5e5; }
+.month-head-cell { padding:8px; text-align:center; font-size:12px; color:#555; border-right:1px solid #f3f3f3; }
+.month-head-cell:last-child { border-right:none; }
+
 /* Scrollable list under calendar */
 .list-scroll { max-height: 360px; overflow-y: auto; }
 
@@ -60,7 +65,17 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .time-calendar { border:1px solid #e5e5e5; border-radius:16px; overflow:hidden; }
 .time-header { display:flex; justify-content: space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e5e5e5; }
 .time-controls { display:flex; gap:8px; align-items:center; }
-.time-wrap { overflow:auto; max-height: 520px; }
+.time-scroll { overflow:auto; max-height: 620px; }
+.day-headers { display:grid; border-bottom:1px solid #e5e5e5; background:#fff; }
+.day-headers.week { grid-template-columns: 64px repeat(7, 1fr); }
+.day-headers.day { grid-template-columns: 64px 1fr; }
+.day-head-cell { padding:8px; text-align:center; font-size:12px; color:#555; border-right:1px solid #f3f3f3; }
+.day-head-cell:last-child { border-right:none; }
+.all-day { display:grid; grid-template-columns: 64px repeat(7, 1fr); border-bottom:1px solid #e5e5e5; background:#fff; }
+.all-day.day { grid-template-columns: 64px 1fr; }
+.all-day .label { display:flex; align-items:center; padding-left:8px; color:#666; font-size:12px; border-right:1px solid #f3f3f3; }
+.all-day .col { min-height: 44px; padding:6px; border-right:1px solid #f3f3f3; }
+.all-day .col:last-child { border-right:none; }
 .time-grid { display:grid; grid-auto-rows: 1fr; }
 .time-grid.week { grid-template-columns: 64px repeat(7, 1fr); }
 .time-grid.day { grid-template-columns: 64px 1fr; }
@@ -73,6 +88,3 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .task-block { position:absolute; left:6px; right:6px; min-height:20px; border:1px solid #e5e5e5; border-radius:12px; background:#fff; padding:4px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
 .time-now-line { position:absolute; left:0; right:0; height:1px; background:#111; box-shadow:0 0 0 1px #111 inset; }
 .time-now-dot { position:absolute; width:8px; height:8px; border-radius:999px; background:#111; left:-4px; top:-3px; }
-.all-day { display:grid; grid-template-columns: 64px repeat(7, 1fr); border-bottom:1px solid #e5e5e5; }
-.all-day .col { min-height: 44px; padding:4px; border-right:1px solid #f3f3f3; }
-.all-day .col:last-child { border-right:none; }
