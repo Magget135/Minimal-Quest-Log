@@ -320,7 +320,7 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
     if freq == 'Daily':
         return True
     if freq == 'Weekdays':
-        return today.weekday() &lt; 5
+        return today.weekday() < 5
     if freq == 'Monthly':
         # Run on the same day-of-month as when it was created if last_added is None,
         # else run once per new calendar month
