@@ -508,7 +508,9 @@ function ActiveQuests({ hideExtras=false }){
             <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>{ranks.map(r=> <option key={r} value={r}>{r}</option>)}</select>
             <input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} />
             <input type="time" className="input" value={form.due_time} onChange={e=>setForm({...form, due_time: e.target.value})} />
-            <select value={repeat} onChange={e=>setRepeat(e.target.value)}>
+            <select value={repeat} onChange={e=>{
+              const val = e.target.value; setRepeat(val); if(val==='custom') setOpenCustom(true);
+            }}>
               <option value="none">Does not repeat</option>
               <option value="daily">Daily</option>
               <option value="weekly_on">Weekly on weekday</option>
