@@ -490,6 +490,8 @@ function ActiveQuests({ hideExtras=false }){
   const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null }); closeTask(); };
   const deleteTask = async (task) => { await deleteRow(task.id); closeTask(); };
 
+  const [openCustom, setOpenCustom] = useState(false);
+
   return (
     <div className="app-shell">
       {/* Sidebar with all features (non-collapsible) */}
