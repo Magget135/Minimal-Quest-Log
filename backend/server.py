@@ -33,7 +33,7 @@ RANK_XP: Dict[str, int] = {
 }
 
 STATUS_OPTIONS = ["Pending", "In Progress", "Completed", "Incomplete"]
-FREQUENCY_OPTIONS = ["Daily", "Weekly", "Weekdays", "Monthly"]
+FREQUENCY_OPTIONS = ["Daily", "Weekly", "Weekdays", "Monthly", "Annual"]
 
 # --- Models ---
 class ActiveQuestCreate(BaseModel):
