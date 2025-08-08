@@ -381,7 +381,7 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
   );
 }
 
-function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection }){
+function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection, onCreateAtDay }){
   if (view === 'month') {
     return <MonthCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} />
   }
