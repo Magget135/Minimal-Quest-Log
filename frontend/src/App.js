@@ -37,7 +37,7 @@ function MiniMonth({selectedDate, onSelect}){
   const startOfMonth = new Date(current.getFullYear(), current.getMonth(), 1);
   const endOfMonth = new Date(current.getFullYear(), current.getMonth()+1, 0);
   const startGrid = startOfWeekMon(startOfMonth);
-  const cells = Array.from({length:42}, (_,i)=&gt; addDays(startGrid,i));
+  const cells = Array.from({length:42}, (_,i)=> addDays(startGrid,i));
   const weekdays = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
   const title = current.toLocaleDateString(undefined, { month:'long', year:'numeric' });
   const todayKey = ymd(new Date());
