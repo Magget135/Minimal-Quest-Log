@@ -571,6 +571,7 @@ function ActiveQuests({ hideExtras=false }){
   const onCreateSelection = (dayDate, startMin, duration) => {
     setQuick({ open:true, dateStr: ymd(dayDate), startMin, duration });
   };
+  const onCreateAtDay = (dayDate) => { setQuick({ open:true, dateStr: ymd(dayDate), startMin: 9*60, duration:60, allDay:true }); };
   const confirmQuickCreate = async ({ title, rank }) => {
     await api.post(`/quests/active`, {
       quest_name: title,
