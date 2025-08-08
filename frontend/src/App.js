@@ -560,12 +560,6 @@ function ActiveQuests({ hideExtras=false }){
 
 
 
-        <div className="card" style={{marginTop:16}}>
-          <div className="kicker" style={{marginBottom:8}}>Recurring</div>
-          <div>
-            <NavLink to="/recurring" className="nav-item" style={{display:'inline-block'}}>Manage Recurring</NavLink>
-          </div>
-        </div>
 
         <div className="card" style={{marginTop:16}}>
           <div className="kicker" style={{marginBottom:8}}>Completed & Rules</div>
