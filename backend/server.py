@@ -92,7 +92,18 @@ class RecurringTask(BaseModel):
     quest_rank: Literal['Common', 'Rare', 'Epic', 'Legendary']
     frequency: Literal['Daily', 'Weekly', 'Weekdays', 'Monthly', 'Annual']
     days: Optional[str] = None  # e.g., "Mon, Fri" for Weekly
-    monthly_on_date: Optional[int] = None  # 1..31 for Monthly
+    monthly_on_date: Optional[int] = None  # 1..31 for Monthly (by date)
+    # Custom support
+    interval: Optional[int] = 1  # every N units
+    monthly_mode: Optional[Literal['date','weekday']] = None
+    monthly_week_index: Optional[int] = None  # 1..5 or -1 for last
+    monthly_weekday: Optional[str] = None  # 'Mon'..'Sun'
+    ends: Optional[Literal['never','on_date','after']] = 'never'
+    until_date: Optional[date] = None
+    count: Optional[int] = None  # total occurrences limit when ends='after'
+    occurrences: Optional[int] = 0  # how many times added
+    start_date: Optional[date] = None  # anchor for interval math
+
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
     last_added: Optional[date] = None
 
