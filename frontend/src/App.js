@@ -749,7 +749,7 @@ function ActiveQuests({ hideExtras=false }){
           onRemoveRecurrence={removeRecurrence}
         />
         <DeleteScopeModal open={confirmDelete.open} onClose={()=>setConfirmDelete({ open:false, task:null })} onDeleteOnly={onDeleteOnly} onDeleteAll={onDeleteAll} />
-        <QuickCreateModal open={quick.open} dateStr={quick.dateStr} startMin={quick.startMin} duration={quick.duration} onClose={()=>setQuick({...quick, open:false})} onCreate={confirmQuickCreate} />
+        <QuickCreateModal open={quick.open} dateStr={quick.dateStr} startMin={quick.startMin} duration={quick.duration} allDay={quick.allDay} onClose={()=>setQuick({...quick, open:false})} onCreate={confirmQuickCreate} />
       </div>
     </div>
   );
