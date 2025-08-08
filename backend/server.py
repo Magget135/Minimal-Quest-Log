@@ -305,7 +305,8 @@ async def upsert_recurring(task: RecurringUpsert):
         days=task.days,
         status=task.status,
     )
-    await db.Recurringtasks.insert_one(new_task.dict())
+    task_data = serialize_dates_for_mongo(new_task.dict())
+    await db.Recurringtasks.insert_one(task_data)
     return new_task
 
 @api_router.delete("/recurring/{task_id}")
