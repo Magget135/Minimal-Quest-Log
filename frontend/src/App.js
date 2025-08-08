@@ -357,7 +357,7 @@ function ActiveQuests(){
 
       {/* Quick add */}
       <form onSubmit={onCreate} className="card" style={{marginTop: 16}}>
-        <div className="row">
+        <div className="row" style={{flexWrap:'wrap'}}>
           <div className="col"><input className="input" placeholder="Quest Name" value={form.quest_name} onChange={e=>setForm({...form, quest_name: e.target.value})} /></div>
           <div>
             <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>
@@ -367,8 +367,13 @@ function ActiveQuests(){
           <div><input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} /></div>
           <div><input type="time" className="input" value={form.due_time} onChange={e=>setForm({...form, due_time: e.target.value})} /></div>
           <div>
-            <select value={form.status} onChange={e=>setForm({...form, status: e.target.value})}>
-              {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+            <select value={repeat} onChange={e=>setRepeat(e.target.value)}>
+              <option value="none">Does not repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly_on">Weekly on selected date's weekday</option>
+              <option value="weekdays">Every weekday (Mon-Fri)</option>
+              <option value="monthly_on_date">Monthly on date</option>
+              <option value="annual">Annually on date</option>
             </select>
           </div>
           <div><button className="btn" type="submit">Add</button></div>
