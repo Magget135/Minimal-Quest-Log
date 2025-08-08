@@ -268,11 +268,12 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
-      if (draft) {
+      if (draft && movedRef.current) {
         const start = draft.startMin;
         const dur = Math.max(SNAP_MIN, draft.duration);
         onCreateSelection(day, start, dur);
       } else {
+        // treat as simple click -> default 1 hr slot where clicked
         onCreateSelection(day, startMin, SNAP_MIN);
       }
       setDraft(null);
