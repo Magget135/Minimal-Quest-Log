@@ -44,7 +44,7 @@ function MiniMonth({selectedDate, onSelect}){
   return (
     <div className="mini-month">
       <div className="mini-header">
-        <button className="btn secondary" onClick={()=&gt;setCurrent(new Date(current.getFullYear(), current.getMonth()-1, 1))}>◀</button>
+        <button className="btn secondary" onClick={()=>setCurrent(new Date(current.getFullYear(), current.getMonth()-1, 1))}>◀</button>
         <div>{title}</div>
         <button className="btn secondary" onClick={()=&gt;setCurrent(new Date(current.getFullYear(), current.getMonth()+1, 1))}>▶</button>
       </div>
