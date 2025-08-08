@@ -3,6 +3,11 @@
 html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .App { min-height: 100vh; }
 
+/* App shell like Google Calendar */
+.app-shell { display:grid; grid-template-columns: 320px 1fr; gap:16px; max-width: 1400px; margin: 0 auto; padding: 16px 24px; }
+.sidebar { position: sticky; top:60px; align-self:start; height: calc(100vh - 80px); overflow:auto; padding-bottom:24px; }
+.main-pane { min-height: 70vh; }
+
 /* Layout & common */
 .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
 .navbar { border-bottom: 1px solid #e5e5e5; background: #fff; position: sticky; top: 0; z-index: 10; }
@@ -26,6 +31,16 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .col { flex:1; }
 .small { font-size: 12px; color:#444; }
 .kicker { color:#666; font-size:12px; }
+
+/* Mini Month Calendar (sidebar) */
+.mini-month { border:1px solid #ececec; border-radius: 16px; overflow:hidden; background:#fff; }
+.mini-header { display:flex; justify-content: space-between; align-items:center; padding:8px 10px; border-bottom:1px solid #f1f1f1; font-size:12px; font-weight:600; }
+.mini-grid { display:grid; grid-template-columns: repeat(7, 1fr); }
+.mini-cell { padding:6px 4px; text-align:center; font-size:11px; color:#555; cursor:pointer; }
+.mini-cell.other { color:#bbb; }
+.mini-cell .dot-today { display:inline-block; width:6px; height:6px; border-radius:999px; background:#111; margin-left:4px; }
+.mini-cell.selected { background:#111; color:#fff; border-radius:8px; }
+.mini-dow { font-size:10px; color:#777; padding:4px 0; text-transform:uppercase; border-bottom:1px solid #f5f5f5; }
 
 /* Due-date dots */
 .dot { width:10px; height:10px; border-radius:999px; display:inline-block; }
