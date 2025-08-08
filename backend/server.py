@@ -444,6 +444,12 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
     freq = task.get('frequency')
     interval = int(task.get('interval') or 1)
     start = task.get('start_date') or today
+    # Convert start_date from string to date if needed
+    if isinstance(start, str):
+        try:
+            start = date.fromisoformat(start)
+        except Exception:
+            start = today
     occurrences = int(task.get('occurrences') or 0)
 
     # End rules
