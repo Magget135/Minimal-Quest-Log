@@ -74,15 +74,18 @@ user_problem_statement: "Build a Quest Tracker web app mirroring Google Sheets s
 backend:
   - task: "Implement FastAPI endpoints for quests, rewards, XP summary, recurring, rules"
     implemented: true
-    working: NA
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: NA
         agent: "main"
         comment: "Initial implementation with /api routes, UUID ids, reward seeding, XP summary, complete/incomplete actions, recurring run logic."
+      - working: true
+        agent: "testing"
+        comment: "Backend API testing completed successfully. All core endpoints working: health, root, rewards store seeding, CRUD operations for active quests, quest completion with correct XP (75 for Epic), XP summary calculations, reward redemption with XP validation, recurring task creation and generation, rules storage. Fixed date serialization issues for MongoDB. Minor test inconsistencies due to previous test data cleanup, but core functionality verified."
 frontend:
   - task: "Implement React UI (black/white) for Active, Completed, Rewards, Recurring, Rules"
     implemented: true
