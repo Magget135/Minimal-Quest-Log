@@ -90,6 +90,14 @@ class RulesDoc(BaseModel):
     content: str
 
 # --- Helpers ---
+def serialize_dates_for_mongo(data: dict) -> dict:
+    """Convert date objects to ISO strings for MongoDB storage"""
+    result = data.copy()
+    for key, value in result.items():
+        if isinstance(value, date) and not isinstance(value, datetime):
+            result[key] = value.isoformat()
+    return result
+
 async def seed_reward_store_if_empty():
     count = await db.RewardStore.count_documents({})
     if count == 0:
