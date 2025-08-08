@@ -79,6 +79,17 @@ frontend:
       - working: NA
         agent: "main"
         comment: "Made headers minimal: MON/TUE/WED with date number beneath; moved Month Year to left; ensured blocks fit within columns; reduced borders for minimal feel." 
+  - task: "Rewards inventory UI (redeem/use; inventory section)"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Added redeem button in store, inventory list with Use action and used status; wired to new backend APIs."
 metadata:
   created_by: "main_agent"
   version: "1.0"
