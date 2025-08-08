@@ -269,7 +269,12 @@ async def list_reward_log():
     cur = db.RewardLog.find({}, {"_id": 0})
     return [RewardLogItem(**doc) async for doc in cur]
 
-@api_router.post("/rewards/redeem", response_model=RewardLogItem)
+@api_router.get("/rewards/inventory", response_model=List[RewardInventoryItem])
+async def list_reward_inventory():
+    cur = db.RewardInventory.find({}, {"_id": 0}).sort("date_redeemed", -1)
+    return [RewardInventoryItem(**doc) async for doc in cur]
+
+@api_router.post("/rewards/redeem", response_model=RewardInventoryItem)
 async def redeem_reward(input: RewardRedeemInput):
     reward = await get_reward_by_identifier(input.reward_id, input.reward_name)
     if not reward:
@@ -277,13 +282,33 @@ async def redeem_reward(input: RewardRedeemInput):
     summary = await compute_xp_summary()
     if summary["balance"] < int(reward["xp_cost"]):
         raise HTTPException(status_code=400, detail="Not enough XP to redeem")
+    # Create log and inventory record
+    now = datetime.now(timezone.utc)
     log_item = RewardLogItem(
-        date_redeemed=datetime.now(timezone.utc),
+        date_redeemed=now,
         reward_name=reward["reward_name"],
         xp_cost=int(reward["xp_cost"]),
     )
+    inv_item = RewardInventoryItem(
+        date_redeemed=now,
+        reward_name=reward["reward_name"],
+        xp_cost=int(reward["xp_cost"]),
+        used=False,
+        used_at=None,
+    )
     await db.RewardLog.insert_one(log_item.dict())
-    return log_item
+    await db.RewardInventory.insert_one(inv_item.dict())
+    return inv_item
+
+@api_router.post("/rewards/use/{inventory_id}")
+async def use_reward(inventory_id: str):
+    doc = await db.RewardInventory.find_one({"id": inventory_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    if doc.get("used"):
+        raise HTTPException(status_code=400, detail="Reward already used")
+    await db.RewardInventory.update_one({"id": inventory_id}, {"$set": {"used": True, "used_at": datetime.now(timezone.utc)}})
+    return {"ok": True}
 
 # XP summary
 @api_router.get("/xp/summary")
