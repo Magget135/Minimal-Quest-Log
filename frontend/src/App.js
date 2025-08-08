@@ -309,7 +309,28 @@ function ActiveQuests(){
     e.preventDefault();
     if(!form.quest_name || !form.due_date) return;
     await api.post(`/quests/active`, { ...form, due_time: form.due_time || null });
+    // If repeating, create a recurring rule mirroring Google Calendar presets
+    try {
+      const d = new Date(form.due_date + 'T00:00:00');
+      let recurringBody = null;
+      if (repeat === 'daily') {
+        recurringBody = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: 'Daily', status: form.status };
+      } else if (repeat === 'weekly_on') {
+        // store human weekday label e.g. Mon
+        const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+        recurringBody = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: 'Weekly', days: wk, status: form.status };
+      } else if (repeat === 'weekdays') {
+        recurringBody = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: 'Weekdays', status: form.status };
+      } else if (repeat === 'monthly_on_date') {
+        recurringBody = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: 'Monthly', monthly_on_date: d.getDate(), status: form.status };
+      } else if (repeat === 'annual') {
+        recurringBody = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: 'Annual', status: form.status };
+      }
+      if (recurringBody) await api.post(`/recurring`, recurringBody);
+    } catch(err) { /* non-blocking */ }
+
     setForm({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
+    setRepeat('none');
     await fetchAll();
   };
 
