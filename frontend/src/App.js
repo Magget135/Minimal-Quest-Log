@@ -287,6 +287,7 @@ function ActiveQuests(){
   const [anchorDate, setAnchorDate] = useState(new Date());
 
   const [form, setForm] = useState({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
+  const [repeat, setRepeat] = useState('none'); // none | daily | weekly_on | weekdays | monthly_on_date | annual | custom
 
   const fetchAll = async () => {
     const q = await api.get(`/quests/active`);
