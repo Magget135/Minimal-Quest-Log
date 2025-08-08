@@ -333,6 +333,42 @@ async def list_recurring():
     cur = db.Recurringtasks.find({}, {"_id": 0})
     return [RecurringTask(**doc) async for doc in cur]
 
+
+# --- Recurring helpers for custom rules ---
+def months_between(a: date, b: date) -> int:
+    return (b.year - a.year) * 12 + (b.month - a.month)
+
+def years_between(a: date, b: date) -> int:
+    return b.year - a.year
+
+WEEKDAY_INDEX = {
+    'Mon': 0, 'Tue': 1, 'Wed': 2, 'Thu': 3, 'Fri': 4, 'Sat': 5, 'Sun': 6
+}
+
+def nth_weekday_day(year: int, month: int, weekday_idx: int, n: int) -> int:
+    """Return the day-of-month for nth weekday (n=1..5, -1 for last)."""
+    # Find all days in this month with weekday_idx
+    first = date(year, month, 1)
+    # iterate days of month
+    days = []
+    d = first
+    while d.month == month:
+        if d.weekday() == weekday_idx:
+            days.append(d.day)
+        d = d.replace(day=d.day + 1) if d.day < 28 else (d + datetime.resolution).date()  # fallback
+        try:
+            d = date(d.year, d.month, d.day)
+        except Exception:
+            # rebuild safely
+            if d.month != month:
+                break
+    if not days:
+        return 1
+    if n == -1:
+        return days[-1]
+    idx = max(1, min(n, len(days))) - 1
+    return days[idx]
+
 class RecurringUpsert(BaseModel):
     id: Optional[str] = None
     task_name: str
