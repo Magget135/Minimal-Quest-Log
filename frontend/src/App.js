@@ -32,6 +32,41 @@ function Navbar() {
   );
 }
 
+function MiniMonth({selectedDate, onSelect}){
+  const [current, setCurrent] = useState(new Date(selectedDate));
+  const startOfMonth = new Date(current.getFullYear(), current.getMonth(), 1);
+  const endOfMonth = new Date(current.getFullYear(), current.getMonth()+1, 0);
+  const startGrid = startOfWeekMon(startOfMonth);
+  const cells = Array.from({length:42}, (_,i)=> addDays(startGrid,i));
+  const weekdays = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const title = current.toLocaleDateString(undefined, { month:'long', year:'numeric' });
+  const todayKey = ymd(new Date());
+  return (
+    <div className="mini-month">
+      <div className="mini-header">
+        <button className="btn secondary" onClick={()=>setCurrent(new Date(current.getFullYear(), current.getMonth()-1, 1))}>◀</button>
+        <div>{title}</div>
+        <button className="btn secondary" onClick={()=>setCurrent(new Date(current.getFullYear(), current.getMonth()+1, 1))}>▶</button>
+      </div>
+      <div className="mini-grid">
+        {weekdays.map(w => <div key={w} className="mini-dow">{w}</div>)}
+        {cells.map((d, idx)=>{
+          const isOther = d.getMonth() !== current.getMonth();
+          const key = ymd(d);
+          const isSelected = ymd(selectedDate) === key;
+          return (
+            <div key={idx} className={`mini-cell ${isOther?'other':''} ${isSelected?'selected':''}`} onClick={()=>onSelect(d)}>
+              {d.getDate()}
+              {key===todayKey? <span className="dot-today" />: null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
 function XPBadge({ summary }){
   return (
     <div className="badge">
