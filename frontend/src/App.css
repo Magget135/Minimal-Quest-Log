@@ -1,63 +1,57 @@
 /* Black & White minimalist theme */
-:root {
-  color-scheme: light;
-}
+:root { color-scheme: light; }
+html, body, #root { height: 100%; background: #ffffff; color: #111111; }
+.App { min-height: 100vh; }
 
-html, body, #root {
-  height: 100%;
-  background: #ffffff;
-  color: #111111;
-}
-
-.App {
-  min-height: 100vh;
-}
-
-/* Utility */
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-.navbar {
-  border-bottom: 1px solid #e5e5e5;
-  background: #fff;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
+/* Layout & common */
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.navbar { border-bottom: 1px solid #e5e5e5; background: #fff; position: sticky; top: 0; z-index: 10; }
 .nav-brand { font-weight: 700; letter-spacing: -0.02em; }
-
 .nav-items { display: flex; gap: 8px; }
-
 .nav-item { padding: 8px 12px; border-radius: 12px; border: 1px solid #e5e5e5; background: #fff; color: #111; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
 .nav-item:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
 .nav-item-active { border-color: #111; }
 .nav-item-inactive { opacity: .8; }
 
 .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid #e5e5e5; background:#fff; }
-
 .card { border: 1px solid #e5e5e5; border-radius: 16px; background: #fff; padding: 16px; transition: transform .15s ease, box-shadow .15s ease; }
 .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-
 .btn { border-radius: 12px; border: 1px solid #111; background: #111; color:#fff; padding:8px 14px; cursor:pointer; }
 .btn.secondary { background:#fff; color:#111; border-color:#e5e5e5; }
 .btn:disabled { opacity:.5; cursor:not-allowed; }
-
 .input, select, textarea { border:1px solid #e5e5e5; border-radius: 12px; padding: 8px 10px; }
 .table { width:100%; border-collapse: separate; border-spacing: 0; }
 .table th, .table td { text-align:left; padding: 10px 8px; border-bottom:1px solid #f0f0f0; }
-
 .row { display:flex; gap: 12px; align-items:center; }
 .col { flex:1; }
+.small { font-size: 12px; color:#444; }
+.kicker { color:#666; font-size:12px; }
 
-/* Tiny due-date dots */
+/* Due-date dots */
 .dot { width:10px; height:10px; border-radius:999px; display:inline-block; }
 .dot.red { background:#ef4444; }
 .dot.blue { background:#3b82f6; }
 .dot.green { background:#22c55e; }
 
-.kicker { color:#666; font-size:12px; }
-.small { font-size: 12px; color:#444; }
+/* Calendar */
+.calendar { border:1px solid #e5e5e5; border-radius:16px; overflow:hidden; }
+.calendar-header { display:flex; justify-content: space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e5e5e5; }
+.calendar-controls { display:flex; gap:8px; align-items:center; }
+.calendar-grid { display:grid; }
+.calendar-grid.week { grid-template-columns: repeat(7, 1fr); }
+.calendar-grid.month { grid-template-columns: repeat(7, 1fr); }
+.calendar-grid.day { grid-template-columns: 1fr; }
+.calendar-cell { min-height: 110px; border-right:1px solid #f0f0f0; border-bottom:1px solid #f0f0f0; padding:8px; position:relative; }
+.calendar-cell:last-child { border-right:none; }
+.calendar-day-number { position:absolute; top:6px; right:8px; font-size:12px; color:#666; }
+.calendar-tasks { display:flex; flex-direction:column; gap:6px; margin-top: 18px; }
+.task-chip { border:1px solid #e5e5e5; border-radius:999px; padding:4px 8px; background:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+
+/* Scrollable list under calendar */
+.list-scroll { max-height: 360px; overflow-y: auto; }
+
+/* Modal */
+.modal-backdrop { position:fixed; inset:0; background: rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; }
+.modal { width: 520px; max-width: 90vw; background:#fff; border:1px solid #e5e5e5; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); }
+.modal-header { display:flex; align-items:center; justify-content: space-between; margin-bottom:12px; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }

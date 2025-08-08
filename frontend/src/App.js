@@ -52,51 +52,135 @@ function useXPSummary(){
   return { summary, refresh };
 }
 
+// Date helpers
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parseISODateOnly = (s) => { const [yy,mm,dd] = s.split('-').map(Number); return new Date(yy, mm-1, dd); };
+const startOfWeekMon = (d) => { const day = d.getDay(); const diff = (day === 0 ? -6 : 1) - day; const res = new Date(d); res.setDate(d.getDate()+diff); return new Date(res.getFullYear(), res.getMonth(), res.getDate()); };
+const addDays = (d, n) => { const res = new Date(d); res.setDate(d.getDate()+n); return res; };
+const startOfMonthGridMon = (d) => { const first = new Date(d.getFullYear(), d.getMonth(), 1); return startOfWeekMon(first); };
+
+function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask }){
+  const today = new Date();
+
+  let cells = [];
+  let header = "";
+  if (view === 'week') {
+    const start = startOfWeekMon(anchorDate);
+    header = `${start.toLocaleDateString()} - ${addDays(start,6).toLocaleDateString()}`;
+    for(let i=0;i<7;i++){
+      const day = addDays(start, i);
+      const key = ymd(day);
+      const items = tasks.filter(t => t.due_date === key);
+      cells.push({ day, items });
+    }
+  } else if (view === 'month') {
+    const start = startOfMonthGridMon(anchorDate);
+    header = anchorDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    for(let i=0;i<42;i++){
+      const day = addDays(start, i);
+      const key = ymd(day);
+      const items = tasks.filter(t => t.due_date === key);
+      cells.push({ day, items });
+    }
+  } else {
+    // day
+    const start = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
+    header = start.toDateString();
+    const key = ymd(start);
+    const items = tasks.filter(t => t.due_date === key);
+    cells.push({ day: start, items });
+  }
+
+  return (
+    <div className="calendar">
+      <div className="calendar-header">
+        <div className="calendar-controls">
+          <button className="btn secondary" onClick={onPrev}>Prev</button>
+          <button className="btn secondary" onClick={onToday}>Today</button>
+          <button className="btn secondary" onClick={onNext}>Next</button>
+        </div>
+        <div>{header}</div>
+        <div className="calendar-controls">
+          <button className={`btn secondary`} onClick={()=>onViewChange('day')}>Day</button>
+          <button className={`btn secondary`} onClick={()=>onViewChange('week')}>Week</button>
+          <button className={`btn secondary`} onClick={()=>onViewChange('month')}>Month</button>
+        </div>
+      </div>
+      <div className={`calendar-grid ${view}`}>
+        {cells.map((c, idx) => (
+          <div key={idx} className="calendar-cell">
+            <div className="calendar-day-number">{c.day.getDate()}</div>
+            <div className="calendar-tasks">
+              {c.items.map(item => (
+                <div key={item.id} className="task-chip" title={item.quest_name} onClick={()=>onOpenTask(item)}>
+                  {item.quest_name}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TaskEditModal({ open, task, onClose, onSave, onDelete }){
+  const [name, setName] = useState(task?.quest_name || "");
+  const [due, setDue] = useState(task?.due_date || "");
+  useEffect(()=>{ setName(task?.quest_name || ""); setDue(task?.due_date || ""); }, [task]);
+  if(!open) return null;
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Edit Task</h3>
+          <button className="btn secondary" onClick={onClose}>Close</button>
+        </div>
+        <div className="row" style={{marginBottom:8}}>
+          <input className="input" placeholder="Task name" value={name} onChange={e=>setName(e.target.value)} />
+          <input className="input" type="date" value={due} onChange={e=>setDue(e.target.value)} />
+        </div>
+        <div className="modal-actions">
+          <button className="btn secondary" onClick={()=>onDelete(task)}>Delete</button>
+          <button className="btn" onClick={()=>onSave({ ...task, quest_name: name, due_date: due })}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActiveQuests(){
   const api = useApi();
   const { summary, refresh: refreshXP } = useXPSummary();
-  const [rewards, setRewards] = useState([]);
   const [list, setList] = useState([]);
-  const [form, setForm] = useState({ quest_name: "", quest_rank: "Common", due_date: "", status: "Pending", redeem_reward: "" });
+  const [rewards, setRewards] = useState([]); // kept for possible future global actions
+
+  // calendar state
+  const [view, setView] = useState('week'); // default 1 week
+  const [anchorDate, setAnchorDate] = useState(new Date());
 
   const fetchAll = async () => {
     const [q, r] = await Promise.all([
       api.get(`/quests/active`),
       api.get(`/rewards/store`),
     ]);
-    setList(q.data);
+    // sort by due_date ascending (past to future)
+    const sorted = [...q.data].sort((a,b) => {
+      const da = new Date(a.due_date + 'T00:00:00').getTime();
+      const db = new Date(b.due_date + 'T00:00:00').getTime();
+      return da - db;
+    });
+    setList(sorted);
     setRewards(r.data);
   };
 
   useEffect(() => { fetchAll(); }, []);
 
-  const onCreate = async (e) => {
-    e.preventDefault();
-    if(!form.quest_name || !form.due_date) return;
-    await api.post(`/quests/active`, { ...form, redeem_reward: form.redeem_reward || null });
-    setForm({ quest_name: "", quest_rank: "Common", due_date: "", status: "Pending", redeem_reward: "" });
-    await fetchAll();
-  };
-
-  const markCompleted = async (id) => {
-    await api.post(`/quests/active/${id}/complete`);
-    await Promise.all([fetchAll(), refreshXP()]);
-  };
-  const markIncomplete = async (id) => {
-    await api.post(`/quests/active/${id}/mark-incomplete`);
-    await fetchAll();
-  };
-
-  const updateRow = async (id, patch) => {
-    await api.patch(`/quests/active/${id}`, patch);
-    await fetchAll();
-  };
-
-  const redeem = async (rewardId) => {
-    if(!rewardId) return;
-    await api.post(`/rewards/redeem`, { reward_id: rewardId });
-    await refreshXP();
-  };
+  const markCompleted = async (id) => { await api.post(`/quests/active/${id}/complete`); await Promise.all([fetchAll(), refreshXP()]); };
+  const markIncomplete = async (id) => { await api.post(`/quests/active/${id}/mark-incomplete`); await fetchAll(); };
+  const updateRow = async (id, patch) => { await api.patch(`/quests/active/${id}`, patch); await fetchAll(); };
+  const deleteRow = async (id) => { await api.delete(`/quests/active/${id}`); await fetchAll(); };
 
   const dueColor = (due) => {
     if(!due) return "";
@@ -108,6 +192,26 @@ function ActiveQuests(){
     return "green";
   };
 
+  // Calendar navigation
+  const onPrev = () => {
+    if(view==='week') setAnchorDate(addDays(anchorDate, -7));
+    else if(view==='month') setAnchorDate(new Date(anchorDate.getFullYear(), anchorDate.getMonth()-1, 1));
+    else setAnchorDate(addDays(anchorDate, -1));
+  };
+  const onNext = () => {
+    if(view==='week') setAnchorDate(addDays(anchorDate, 7));
+    else if(view==='month') setAnchorDate(new Date(anchorDate.getFullYear(), anchorDate.getMonth()+1, 1));
+    else setAnchorDate(addDays(anchorDate, 1));
+  };
+  const onToday = () => setAnchorDate(new Date());
+
+  // Modal state
+  const [editing, setEditing] = useState(null);
+  const openTask = (task) => setEditing(task);
+  const closeTask = () => setEditing(null);
+  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date }); closeTask(); };
+  const deleteTask = async (task) => { await deleteRow(task.id); closeTask(); };
+
   return (
     <div className="container">
       <div className="row" style={{justifyContent: 'space-between'}}>
@@ -115,31 +219,22 @@ function ActiveQuests(){
         <XPBadge summary={summary} />
       </div>
 
-      <form onSubmit={onCreate} className="card" style={{marginTop: 16}}>
-        <div className="row">
-          <div className="col"><input className="input" placeholder="Quest Name" value={form.quest_name} onChange={e=>setForm({...form, quest_name: e.target.value})} /></div>
-          <div>
-            <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>
-              {ranks.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-          <div><input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} /></div>
-          <div>
-            <select value={form.status} onChange={e=>setForm({...form, status: e.target.value})}>
-              {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <select value={form.redeem_reward} onChange={e=>setForm({...form, redeem_reward: e.target.value})}>
-              <option value="">Select reward (optional)</option>
-              {rewards.map(r => <option key={r.id} value={r.id}>{r.reward_name} ({r.xp_cost})</option>)}
-            </select>
-          </div>
-          <div><button className="btn" type="submit">Add</button></div>
-        </div>
-      </form>
+      {/* Calendar */}
+      <div style={{marginTop: 16}}>
+        <Calendar
+          tasks={list}
+          view={view}
+          anchorDate={anchorDate}
+          onPrev={onPrev}
+          onNext={onNext}
+          onToday={onToday}
+          onViewChange={setView}
+          onOpenTask={openTask}
+        />
+      </div>
 
-      <div className="card" style={{marginTop: 16}}>
+      {/* Scrollable list under calendar */}
+      <div className="card list-scroll" style={{marginTop:16}}>
         <table className="table">
           <thead>
             <tr>
@@ -147,14 +242,17 @@ function ActiveQuests(){
               <th>Quest Rank</th>
               <th>Due Date</th>
               <th>Status</th>
-              <th>Redeem Reward</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {list.map(row => (
               <tr key={row.id}>
-                <td>{row.quest_name}</td>
+                <td>
+                  <button className="btn secondary" onClick={()=>openTask(row)} style={{border:'none', background:'transparent', color:'#111', padding:0}}>
+                    {row.quest_name}
+                  </button>
+                </td>
                 <td>
                   <select value={row.quest_rank} onChange={e=>updateRow(row.id,{quest_rank: e.target.value})}>
                     {ranks.map(r => <option key={r} value={r}>{r}</option>)}
@@ -175,16 +273,6 @@ function ActiveQuests(){
                   </select>
                 </td>
                 <td>
-                  <select value={row.redeem_reward || ""} onChange={async e=>{
-                    const val = e.target.value; 
-                    await updateRow(row.id,{redeem_reward: val || null});
-                    if(val) await redeem(val);
-                  }}>
-                    <option value="">Select reward</option>
-                    {rewards.map(r => <option key={r.id} value={r.id}>{r.reward_name} ({r.xp_cost})</option>)}
-                  </select>
-                </td>
-                <td>
                   <button className="btn secondary" onClick={()=>markCompleted(row.id)}>Complete</button>
                 </td>
               </tr>
@@ -192,6 +280,9 @@ function ActiveQuests(){
           </tbody>
         </table>
       </div>
+
+      {/* Modal for editing */}
+      <TaskEditModal open={!!editing} task={editing} onClose={closeTask} onSave={saveTask} onDelete={deleteTask} />
     </div>
   );
 }
