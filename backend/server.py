@@ -340,6 +340,15 @@ class RecurringUpsert(BaseModel):
     frequency: Literal['Daily', 'Weekly', 'Weekdays', 'Monthly', 'Annual']
     days: Optional[str] = None
     monthly_on_date: Optional[int] = None
+    # Custom fields
+    interval: Optional[int] = 1
+    monthly_mode: Optional[Literal['date','weekday']] = None
+    monthly_week_index: Optional[int] = None
+    monthly_weekday: Optional[str] = None
+    ends: Optional[Literal['never','on_date','after']] = 'never'
+    until_date: Optional[date] = None
+    count: Optional[int] = None
+
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
 
 @api_router.post("/recurring", response_model=RecurringTask)
