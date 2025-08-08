@@ -726,6 +726,7 @@ class QuestTrackerTester:
             self.test_health_endpoint,
             self.test_root_endpoint,
             self.test_rewards_store_seeding,
+            self.test_rewards_inventory_end_to_end,  # New comprehensive test
             self.test_create_active_quest,
             self.test_list_active_quests,
             self.test_update_active_quest,
