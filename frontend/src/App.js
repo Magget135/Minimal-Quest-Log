@@ -252,7 +252,7 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
   const pxToMin = (y) => Math.max(0, Math.min(24*60, Math.round(y / MINUTE_PX)));
 
   // Selection to create
-  const onMouseDown = (e) => {
+  const onMouseDown = (e) => { movedRef.current = false;
     if (e.target.closest('.task-block')) return; // don't start selection on task
     const rect = colRef.current.getBoundingClientRect();
     const y = e.clientY - rect.top;
