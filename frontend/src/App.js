@@ -476,7 +476,7 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence
   );
 }
 
-function QuickCreateModal({ open, pos, dateStr, startMin, duration, onClose, onCreate }){
+function QuickCreateModal({ open, dateStr, startMin, duration, allDay, onClose, onCreate }){
   const [title, setTitle] = useState("");
   const [rank, setRank] = useState("Common");
   if(!open) return null;
