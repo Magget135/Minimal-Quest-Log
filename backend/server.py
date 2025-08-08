@@ -78,6 +78,14 @@ class RewardLogItem(BaseModel):
     reward_name: str
     xp_cost: int
 
+class RewardInventoryItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    date_redeemed: datetime
+    reward_name: str
+    xp_cost: int
+    used: bool = False
+    used_at: Optional[datetime] = None
+
 class RecurringTask(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     task_name: str
