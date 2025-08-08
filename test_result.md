@@ -64,6 +64,17 @@ backend:
       - working: true
         agent: "testing"
         comment: "Backend tests passed."
+  - task: "Reward Inventory APIs (list inventory, redeem to inventory, use reward)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "E2E inventory flow tested: redeem -> inventory -> use -> prevent re-use."
       - working: true
         agent: "testing"
         comment: "Comprehensive rewards inventory end-to-end testing completed successfully. All 8 test steps passed: 1) Created and completed Common quest for 25 XP, 2) Retrieved rewards store and found $1 Credit (25 XP), 3) Successfully redeemed $1 Credit with inventory item (used=false), 4) Verified new item appears at top of inventory with used=false, 5) Successfully used inventory item, 6) Verified item marked as used=true with used_at timestamp, 7) Confirmed redemption log entry exists, 8) Edge case: correctly rejected attempt to use already used item with 400 error. No 5xx errors found in backend logs."
