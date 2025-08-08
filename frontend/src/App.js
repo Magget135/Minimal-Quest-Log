@@ -559,13 +559,6 @@ function ActiveQuests({ hideExtras=false }){
         </div>
 
 
-        <div className="card" style={{marginTop:16}}>
-          <div className="kicker" style={{marginBottom:8}}>Rewards</div>
-          <div>
-            {/* Simple link buttons to focus main content routes if ever needed */}
-            <NavLink to="/rewards" className="nav-item" style={{display:'inline-block'}}>Open Rewards</NavLink>
-          </div>
-        </div>
 
         <div className="card" style={{marginTop:16}}>
           <div className="kicker" style={{marginBottom:8}}>Recurring</div>
