@@ -561,13 +561,6 @@ function ActiveQuests({ hideExtras=false }){
 
 
 
-        <div className="card" style={{marginTop:16}}>
-          <div className="kicker" style={{marginBottom:8}}>Completed & Rules</div>
-          <div className="row" style={{flexWrap:'wrap'}}>
-            <NavLink to="/completed" className="nav-item">Completed</NavLink>
-            <NavLink to="/rules" className="nav-item">Rules</NavLink>
-          </div>
-        </div>
       </div>
 
       {/* Main calendar pane */}
