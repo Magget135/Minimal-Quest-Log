@@ -59,7 +59,7 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "testing"
@@ -67,6 +67,9 @@ backend:
       - working: NA
         agent: "main"
         comment: "Added optional due_time to ActiveQuests models and endpoints. Requires quick regression test for create/list/update." 
+      - working: true
+        agent: "testing"
+        comment: "Due_time regression testing completed successfully. Fixed minor backend bug where due_time couldn't be set to null. All 6 due_time tests passed: create with due_time (15:30), create with earlier time (09:00), list verification, update due_time (08:00), remove due_time (null), and recurring tasks unaffected. Core backend functionality remains stable." 
 frontend:
   - task: "Implement React UI (black/white) for Active, Completed, Rewards, Recurring, Rules"
     implemented: true
