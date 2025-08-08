@@ -558,15 +558,6 @@ function ActiveQuests({ hideExtras=false }){
           </div>
         </div>
 
-        <div className="card" style={{marginTop:16}}>
-          <div className="kicker" style={{marginBottom:8}}>Quick Actions</div>
-          <div className="row" style={{flexWrap:'wrap'}}>
-            <button className="btn secondary" onClick={()=>setView('day')}>Day</button>
-            <button className="btn secondary" onClick={()=>setView('week')}>Week</button>
-            <button className="btn secondary" onClick={()=>setView('month')}>Month</button>
-            <button className="btn secondary" onClick={()=>setAnchorDate(new Date())}>Today</button>
-          </div>
-        </div>
 
         <div className="card" style={{marginTop:16}}>
           <div className="kicker" style={{marginBottom:8}}>Rewards</div>
