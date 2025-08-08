@@ -312,6 +312,92 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete }){
   );
 }
 
+
+function CustomRepeatModal({ open, baseDate, onClose, onSave }){
+  const d = baseDate || new Date();
+  const [freq, setFreq] = useState('Daily');
+  const [interval, setInterval] = useState(1);
+  const [monthlyMode, setMonthlyMode] = useState('date');
+  const [monthlyWeekIndex, setMonthlyWeekIndex] = useState(1); // 1..5 or -1
+  const [monthlyWeekday, setMonthlyWeekday] = useState(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);
+  const [monthlyOnDate, setMonthlyOnDate] = useState(d.getDate());
+  const [ends, setEnds] = useState('never');
+  const [untilDate, setUntilDate] = useState('');
+  const [count, setCount] = useState(0);
+
+  if (!open) return null;
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Custom Repeat</h3>
+          <button className="btn secondary" onClick={onClose}>Close</button>
+        </div>
+        <div className="row" style={{flexWrap:'wrap', marginBottom:8}}>
+          <select value={freq} onChange={e=>setFreq(e.target.value)}>
+            {['Daily','Weekly','Weekdays','Monthly','Annual'].map(f=> <option key={f}>{f}</option>)}
+          </select>
+          <input className="input" type="number" min={1} value={interval} onChange={e=>setInterval(Number(e.target.value||1))} />
+          <span className="small">Every N {freq.toLowerCase()}</span>
+        </div>
+        {freq==='Weekly' && (
+          <div className="row" style={{marginBottom:8}}>
+            <span className="small">Days (Mon, Wed):</span>
+            <input className="input" placeholder="Mon, Wed" id="weekly-days-input" />
+            <span className="small">You can edit later in Recurring</span>
+          </div>
+        )}
+        {freq==='Monthly' && (
+          <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
+            <select value={monthlyMode} onChange={e=>setMonthlyMode(e.target.value)}>
+              <option value="date">On day {monthlyOnDate}</option>
+              <option value="weekday">On the nth weekday</option>
+            </select>
+            {monthlyMode==='date' ? (
+              <input className="input" type="number" min={1} max={31} value={monthlyOnDate} onChange={e=>setMonthlyOnDate(Number(e.target.value||1))} />
+            ) : (
+              <>
+                <select value={monthlyWeekIndex} onChange={e=>setMonthlyWeekIndex(Number(e.target.value))}>
+                  {[1,2,3,4,5,-1].map(n=> <option key={n} value={n}>{n===-1?'Last':`${n}th`}</option>)}
+                </select>
+                <select value={monthlyWeekday} onChange={e=>setMonthlyWeekday(e.target.value)}>
+                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=> <option key={w}>{w}</option>)}
+                </select>
+              </>
+            )}
+          </div>
+        )}
+        <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
+          <select value={ends} onChange={e=>setEnds(e.target.value)}>
+            <option value="never">Ends: Never</option>
+            <option value="on_date">Ends: On date</option>
+            <option value="after">Ends: After N</option>
+          </select>
+          {ends==='on_date' && (<input className="input" type="date" value={untilDate} onChange={e=>setUntilDate(e.target.value)} />)}
+          {ends==='after' && (<input className="input" type="number" min={1} value={count} onChange={e=>setCount(Number(e.target.value||0))} />)}
+        </div>
+        <div className="modal-actions">
+          <button className="btn" onClick={()=>{
+            onSave({
+              frequency: freq,
+              interval,
+              monthly_mode: freq==='Monthly'? monthlyMode : undefined,
+              monthly_on_date: freq==='Monthly' && monthlyMode==='date'? monthlyOnDate : undefined,
+              monthly_week_index: freq==='Monthly' && monthlyMode==='weekday'? monthlyWeekIndex : undefined,
+              monthly_weekday: freq==='Monthly' && monthlyMode==='weekday'? monthlyWeekday : undefined,
+              ends,
+              until_date: ends==='on_date' && untilDate ? untilDate : undefined,
+              count: ends==='after' && count ? count : undefined,
+              days: freq==='Weekly' ? document.getElementById('weekly-days-input')?.value : undefined,
+            });
+            onClose();
+          }}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActiveQuests({ hideExtras=false }){
   const api = useApi();
   const { summary, refresh: refreshXP } = useXPSummary();
