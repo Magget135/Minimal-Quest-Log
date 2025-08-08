@@ -7,7 +7,7 @@ import requests
 import json
 from datetime import datetime, date, timedelta
 
-BASE_URL = "https://ffa318d9-8342-4b52-9a53-56068d8055df.preview.emergentagent.com/api"
+BASE_URL = "https://ace18cbc-8eb0-42fb-ac3e-6c117ce871d5.preview.emergentagent.com/api"
 
 def test_core_flow():
     session = requests.Session()

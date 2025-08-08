@@ -16,7 +16,7 @@ from datetime import datetime, date, timedelta
 import sys
 
 # Use the production backend URL from frontend/.env
-BASE_URL = "https://ffa318d9-8342-4b52-9a53-56068d8055df.preview.emergentagent.com/api"
+BASE_URL = "https://ace18cbc-8eb0-42fb-ac3e-6c117ce871d5.preview.emergentagent.com/api"
 
 class ReviewValidationTester:
     def __init__(self):
