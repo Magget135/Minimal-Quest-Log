@@ -577,8 +577,8 @@ function ActiveQuests({ hideExtras=false }){
       quest_name: title,
       quest_rank: rank,
       due_date: quick.dateStr,
-      due_time: hhmm(quick.startMin),
-      duration_minutes: quick.duration,
+      due_time: quick.allDay ? null : hhmm(quick.startMin),
+      duration_minutes: quick.allDay ? undefined : quick.duration,
       status: 'Pending'
     });
     setQuick({ ...quick, open:false });
