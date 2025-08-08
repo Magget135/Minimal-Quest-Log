@@ -59,11 +59,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: true
         agent: "testing"
         comment: "Backend tests passed for all endpoints including health, rewards seeding, active quest CRUD, completion flow, XP summary, redeem validation/logging, recurring generation, rules."
+      - working: NA
+        agent: "main"
+        comment: "Added optional due_time to ActiveQuests models and endpoints. Requires quick regression test for create/list/update." 
 frontend:
   - task: "Implement React UI (black/white) for Active, Completed, Rewards, Recurring, Rules"
     implemented: true
@@ -75,21 +78,21 @@ frontend:
     status_history:
       - working: NA
         agent: "main"
-        comment: "Updated Active page: added calendar view (Day/Week/Month with Week default), sorted tasks by due date ascending, moved list under calendar in scrollable card, removed per-task reward redeem, added task edit modal (name/due date/delete)."
+        comment: "Implemented time-grid calendar for Day/Week with current time line and All-day row; added due_time to create form and edit modal; kept month grid as before; list stays sorted by due_date then due_time." 
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Frontend calendar rendering and navigation"
-    - "Active list sorting and modal editing"
+    - "Backend minimal regression for due_time field (create/update/list)"
+    - "Frontend time calendar rendering, current time line position"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Awaiting user approval to run automated frontend tests for new calendar UI and editing flow."
+    message: "Please run backend quick regression for due_time support; will await user go-ahead before automated frontend tests."

@@ -41,8 +41,9 @@ class ActiveQuestCreate(BaseModel):
     quest_name: str
     quest_rank: Literal['Common', 'Rare', 'Epic', 'Legendary']
     due_date: date
+    due_time: Optional[str] = None  # HH:MM (local user-facing), stored as string
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
-    redeem_reward: Optional[str] = None  # reward name selected from store
+    redeem_reward: Optional[str] = None  # reward id from store (kept for compatibility)
 
 class ActiveQuest(ActiveQuestCreate):
     pass
@@ -51,6 +52,7 @@ class ActiveQuestUpdate(BaseModel):
     quest_name: Optional[str] = None
     quest_rank: Optional[Literal['Common', 'Rare', 'Epic', 'Legendary']] = None
     due_date: Optional[date] = None
+    due_time: Optional[str] = None
     status: Optional[Literal['Pending', 'In Progress', 'Completed', 'Incomplete']] = None
     redeem_reward: Optional[str] = None
 

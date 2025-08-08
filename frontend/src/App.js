@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import axios from "axios";
@@ -53,16 +53,15 @@ function useXPSummary(){
 }
 
 // Date helpers
-const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const parseISODateOnly = (s) => { const [yy,mm,dd] = s.split('-').map(Number); return new Date(yy, mm-1, dd); };
 const startOfWeekMon = (d) => { const day = d.getDay(); const diff = (day === 0 ? -6 : 1) - day; const res = new Date(d); res.setDate(d.getDate()+diff); return new Date(res.getFullYear(), res.getMonth(), res.getDate()); };
 const addDays = (d, n) => { const res = new Date(d); res.setDate(d.getDate()+n); return res; };
-const startOfMonthGridMon = (d) => { const first = new Date(d.getFullYear(), d.getMonth(), 1); return startOfWeekMon(first); };
 
-function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask }){
-  const today = new Date();
+const HOUR_HEIGHT = 48; // px
+const MINUTE_PX = HOUR_HEIGHT / 60; // 0.8px per min => 1152px height
 
+function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask}){
   let cells = [];
   let header = "";
   if (view === 'week') {
@@ -125,10 +124,126 @@ function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChan
   );
 }
 
+function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask}){
+  const isWeek = view === 'week';
+  const start = isWeek ? startOfWeekMon(anchorDate) : new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
+  const days = isWeek ? Array.from({length:7}, (_,i)=> addDays(start,i)) : [start];
+
+  const now = new Date();
+
+  // Group tasks by date
+  const byDate = Object.create(null);
+  days.forEach(d => { byDate[ymd(d)] = { timed: [], allDay: [] }; });
+  tasks.forEach(t => {
+    if (byDate[t.due_date]) {
+      if (t.due_time) byDate[t.due_date].timed.push(t); else byDate[t.due_date].allDay.push(t);
+    }
+  });
+  // Sort timed by time asc
+  Object.values(byDate).forEach(bucket => {
+    bucket.timed.sort((a,b)=> (a.due_time||"00:00").localeCompare(b.due_time||"00:00"));
+  });
+
+  const hours = Array.from({length:24}, (_,i)=> i);
+
+  const timeLabels = (
+    <div className="time-labels">
+      {hours.map(h => (
+        <div key={h} className="time-hour">{h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`}</div>
+      ))}
+    </div>
+  );
+
+  const renderHourLines = () => (
+    hours.map(h => (
+      <div key={h} className="time-hour-line" style={{ top: h * HOUR_HEIGHT }} />
+    ))
+  );
+
+  const renderTaskBlock = (t) => {
+    const [hh, mm] = (t.due_time || "00:00").split(":").map(Number);
+    const top = (hh*60 + mm) * MINUTE_PX;
+    const height = Math.max(22, 30); // simple min height
+    return (
+      <div key={t.id} className="task-block" style={{ top, height }} title={t.quest_name} onClick={()=>onOpenTask(t)}>
+        {t.quest_name} {t.due_time ? `(${t.due_time})` : ''}
+      </div>
+    );
+  };
+
+  const nowLine = (day) => {
+    if (ymd(day) !== ymd(now)) return null;
+    const minutes = now.getHours()*60 + now.getMinutes();
+    const top = minutes * MINUTE_PX;
+    return (
+      <div className="time-now-line" style={{ top }}>
+        <div className="time-now-dot" />
+      </div>
+    );
+  };
+
+  return (
+    <div className="time-calendar">
+      <div className="time-header">
+        <div className="time-controls">
+          <button className="btn secondary" onClick={onPrev}>Prev</button>
+          <button className="btn secondary" onClick={onToday}>Today</button>
+          <button className="btn secondary" onClick={onNext}>Next</button>
+        </div>
+        <div>{isWeek ? `${days[0].toLocaleDateString()} - ${days[6].toLocaleDateString()}` : days[0].toDateString()}</div>
+        <div className="time-controls">
+          <button className={`btn secondary`} onClick={()=>onViewChange('day')}>Day</button>
+          <button className={`btn secondary`} onClick={()=>onViewChange('week')}>Week</button>
+          <button className={`btn secondary`} onClick={()=>onViewChange('month')}>Month</button>
+        </div>
+      </div>
+
+      {/* All-day row */}
+      <div className="all-day">
+        <div className="col" style={{borderRight:'1px solid #f3f3f3', display:'flex', alignItems:'center', paddingLeft:8}}>
+          <span className="small">All-day</span>
+        </div>
+        {days.map(d => (
+          <div key={ymd(d)} className="col">
+            <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+              {byDate[ymd(d)].allDay.map(item => (
+                <div key={item.id} className="task-chip" onClick={()=>onOpenTask(item)}>{item.quest_name}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className={`time-wrap`}>
+        <div className={`time-grid ${isWeek ? 'week' : 'day'}`}>
+          {timeLabels}
+          {days.map(d => (
+            <div key={ymd(d)} className="time-col">
+              {renderHourLines()}
+              {byDate[ymd(d)].timed.map(renderTaskBlock)}
+              {nowLine(d)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function startOfMonthGridMon(d){ const first = new Date(d.getFullYear(), d.getMonth(), 1); return startOfWeekMon(first); }
+
+function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask }){
+  if (view === 'month') {
+    return <MonthCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} />
+  }
+  return <TimeCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} />
+}
+
 function TaskEditModal({ open, task, onClose, onSave, onDelete }){
   const [name, setName] = useState(task?.quest_name || "");
   const [due, setDue] = useState(task?.due_date || "");
-  useEffect(()=>{ setName(task?.quest_name || ""); setDue(task?.due_date || ""); }, [task]);
+  const [dueTime, setDueTime] = useState(task?.due_time || "");
+  useEffect(()=>{ setName(task?.quest_name || ""); setDue(task?.due_date || ""); setDueTime(task?.due_time || ""); }, [task]);
   if(!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -140,10 +255,11 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete }){
         <div className="row" style={{marginBottom:8}}>
           <input className="input" placeholder="Task name" value={name} onChange={e=>setName(e.target.value)} />
           <input className="input" type="date" value={due} onChange={e=>setDue(e.target.value)} />
+          <input className="input" type="time" value={dueTime} onChange={e=>setDueTime(e.target.value)} />
         </div>
         <div className="modal-actions">
           <button className="btn secondary" onClick={()=>onDelete(task)}>Delete</button>
-          <button className="btn" onClick={()=>onSave({ ...task, quest_name: name, due_date: due })}>Save</button>
+          <button className="btn" onClick={()=>onSave({ ...task, quest_name: name, due_date: due, due_time: dueTime || null })}>Save</button>
         </div>
       </div>
     </div>
@@ -154,28 +270,41 @@ function ActiveQuests(){
   const api = useApi();
   const { summary, refresh: refreshXP } = useXPSummary();
   const [list, setList] = useState([]);
-  const [rewards, setRewards] = useState([]); // kept for possible future global actions
+  const [rewards, setRewards] = useState([]); // reserved for global actions
 
   // calendar state
   const [view, setView] = useState('week'); // default 1 week
   const [anchorDate, setAnchorDate] = useState(new Date());
+
+  const [form, setForm] = useState({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
 
   const fetchAll = async () => {
     const [q, r] = await Promise.all([
       api.get(`/quests/active`),
       api.get(`/rewards/store`),
     ]);
-    // sort by due_date ascending (past to future)
+    // sort by due_date then due_time (empty first)
     const sorted = [...q.data].sort((a,b) => {
       const da = new Date(a.due_date + 'T00:00:00').getTime();
       const db = new Date(b.due_date + 'T00:00:00').getTime();
-      return da - db;
+      if (da !== db) return da - db;
+      const ta = (a.due_time || '');
+      const tb = (b.due_time || '');
+      return ta.localeCompare(tb);
     });
     setList(sorted);
     setRewards(r.data);
   };
 
   useEffect(() => { fetchAll(); }, []);
+
+  const onCreate = async (e) => {
+    e.preventDefault();
+    if(!form.quest_name || !form.due_date) return;
+    await api.post(`/quests/active`, { ...form, due_time: form.due_time || null });
+    setForm({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
+    await fetchAll();
+  };
 
   const markCompleted = async (id) => { await api.post(`/quests/active/${id}/complete`); await Promise.all([fetchAll(), refreshXP()]); };
   const markIncomplete = async (id) => { await api.post(`/quests/active/${id}/mark-incomplete`); await fetchAll(); };
@@ -209,7 +338,7 @@ function ActiveQuests(){
   const [editing, setEditing] = useState(null);
   const openTask = (task) => setEditing(task);
   const closeTask = () => setEditing(null);
-  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date }); closeTask(); };
+  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null }); closeTask(); };
   const deleteTask = async (task) => { await deleteRow(task.id); closeTask(); };
 
   return (
@@ -218,6 +347,26 @@ function ActiveQuests(){
         <h2>Active Quests</h2>
         <XPBadge summary={summary} />
       </div>
+
+      {/* Quick add */}
+      <form onSubmit={onCreate} className="card" style={{marginTop: 16}}>
+        <div className="row">
+          <div className="col"><input className="input" placeholder="Quest Name" value={form.quest_name} onChange={e=>setForm({...form, quest_name: e.target.value})} /></div>
+          <div>
+            <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>
+              {ranks.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          <div><input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} /></div>
+          <div><input type="time" className="input" value={form.due_time} onChange={e=>setForm({...form, due_time: e.target.value})} /></div>
+          <div>
+            <select value={form.status} onChange={e=>setForm({...form, status: e.target.value})}>
+              {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><button className="btn" type="submit">Add</button></div>
+        </div>
+      </form>
 
       {/* Calendar */}
       <div style={{marginTop: 16}}>
@@ -261,6 +410,7 @@ function ActiveQuests(){
                 <td>
                   <span className={`dot ${dueColor(row.due_date)}`} style={{marginRight:6}}></span>
                   <input type="date" value={row.due_date} onChange={e=>updateRow(row.id,{due_date: e.target.value})} />
+                  {row.due_time ? <span className="small" style={{marginLeft:8}}>{row.due_time}</span> : null}
                 </td>
                 <td>
                   <select value={row.status} onChange={async e=>{
