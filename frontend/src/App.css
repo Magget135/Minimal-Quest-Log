@@ -1,4 +1,4 @@
-/* Black &amp; White minimalist theme */
+/* Black & White minimalist theme */
 :root { color-scheme: light; }
 html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .App { min-height: 100vh; }
@@ -8,7 +8,7 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .sidebar { position: sticky; top:60px; align-self:start; height: calc(100vh - 80px); overflow:auto; padding-bottom:24px; }
 .main-pane { min-height: 70vh; }
 
-/* Layout &amp; common */
+/* Layout & common */
 .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
 .navbar { border-bottom: 1px solid #e5e5e5; background: #fff; position: sticky; top: 0; z-index: 10; }
 .nav-brand { font-weight: 700; letter-spacing: -0.02em; }
@@ -76,12 +76,12 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 
 /* Modal */
 .modal-backdrop { position:fixed; inset:0; background: rgba(0,0,0,0.15); display:flex; align-items:center; justify-content:center; }
-.modal { width: 520px; max-width: 90vw; background:#fff; border:1px solid #e5e5e5; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); }
+.modal { width: 540px; max-width: 95vw; background:#fff; border:1px solid #e5e5e5; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12); }
 .modal-header { display:flex; align-items:center; justify-content: space-between; margin-bottom:12px; }
 .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
 
 /* Time calendar (day/week) */
-.time-scroll { overflow:auto; max-height: 620px; }
+.time-scroll { overflow:auto; max-height: 620px; position: relative; }
 .day-headers { display:grid; border-bottom:1px solid #f1f1f1; background:#fff; }
 .day-headers.week { grid-template-columns: 64px repeat(7, 1fr); }
 .day-headers.day { grid-template-columns: 64px 1fr; }
@@ -97,20 +97,26 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .all-day .col { min-height: 44px; padding:6px; border-right:1px solid #f9f9f9; }
 .all-day .col:last-child { border-right:none; }
 
-.time-grid { display:grid; grid-auto-rows: 1fr; }
+.time-grid { display:grid; grid-auto-rows: 1fr; position: relative; }
 .time-grid.week { grid-template-columns: 64px repeat(7, 1fr); }
 .time-grid.day { grid-template-columns: 64px 1fr; }
 .time-labels, .time-col { position: relative; height: 1152px; /* 24 * 48px */ }
 .time-labels { background:#fff; border-right:1px solid #f1f1f1; }
 .time-hour { height: 48px; border-top:1px solid #f7f7f7; font-size:10px; color:#888; padding-left:8px; display:flex; align-items:flex-start; }
-.time-col { background:#fff; border-right:1px solid #fafafa; }
+.time-col { background:#fff; border-right:1px solid #fafafa; cursor: crosshair; }
 .time-col:last-child { border-right:none; }
 .time-hour-line { position:absolute; left:0; right:0; height:1px; background:#f7f7f7; }
-.task-block { position:absolute; left:6px; right:6px; min-height:20px; border:1px solid #ececec; border-radius:12px; background:#fff; padding:4px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+.task-block { position:absolute; left:6px; right:6px; min-height:22px; border:1px solid #ececec; border-radius:12px; background:#fff; padding:4px 8px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:grab; }
+.task-block.dragging { opacity:.85; box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+.task-time { font-size:11px; color:#666; margin-right:6px; }
+.resize-handle { position:absolute; left:8px; right:8px; bottom:2px; height:6px; cursor: ns-resize; border-top:1px dashed #ddd; }
 .time-now-line { position:absolute; left:0; right:0; height:1px; background:#111; box-shadow:0 0 0 1px #111 inset; }
 .time-now-dot { position:absolute; width:8px; height:8px; border-radius:999px; background:#111; left:-4px; top:-3px; }
 
-/* Reward animation (minimalist, B&amp;W) */
+/* Draft selection */
+.draft-block { position:absolute; left:6px; right:6px; border:1px dashed #bbb; background: rgba(0,0,0,0.04); border-radius:12px; pointer-events:none; }
+
+/* Reward animation (minimalist, B&W) */
 .reward-anim-container { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
 .reward-confetti { position: absolute; background: var(--bg, #111); opacity: 0; animation: reward-burst 700ms ease-out forwards; }
 @keyframes reward-burst {

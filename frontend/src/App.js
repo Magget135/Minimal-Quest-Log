@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 import axios from "axios";
@@ -35,7 +35,6 @@ function Navbar() {
 function MiniMonth({selectedDate, onSelect}){
   const [current, setCurrent] = useState(new Date(selectedDate));
   const startOfMonth = new Date(current.getFullYear(), current.getMonth(), 1);
-  const endOfMonth = new Date(current.getFullYear(), current.getMonth()+1, 0);
   const startGrid = startOfWeekMon(startOfMonth);
   const cells = Array.from({length:42}, (_,i)=> addDays(startGrid,i));
   const weekdays = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
@@ -66,7 +65,6 @@ function MiniMonth({selectedDate, onSelect}){
   );
 }
 
-
 function XPBadge({ summary }){
   return (
     <div className="badge">
@@ -95,6 +93,9 @@ function startOfMonthGridMon(d){ const first = new Date(d.getFullYear(), d.getMo
 
 const HOUR_HEIGHT = 48; // px
 const MINUTE_PX = HOUR_HEIGHT / 60; // 0.8px per min
+const SNAP_MIN = 15;
+const snapMin = (mins) => Math.round(mins / SNAP_MIN) * SNAP_MIN;
+const hhmm = (m) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 
 function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask}){
   let cells = [];
@@ -156,12 +157,10 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
   );
 }
 
-function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask}){
+function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection}){
   const isWeek = view === 'week';
   const start = isWeek ? startOfWeekMon(anchorDate) : new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
   const days = isWeek ? Array.from({length:7}, (_,i)=> addDays(start,i)) : [start];
-
-  const now = new Date();
 
   // Group tasks by date
   const byDate = Object.create(null);
@@ -235,7 +234,7 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
             ))}
           </div>
           {days.map(d => (
-            <DayColumn key={ymd(d)} day={d} items={byDate[ymd(d)].timed} onOpenTask={onOpenTask} />
+            <DayColumn key={ymd(d)} day={d} items={byDate[ymd(d)].timed} onOpenTask={onOpenTask} onCreateSelection={onCreateSelection} />
           ))}
         </div>
       </div>
@@ -243,20 +242,122 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
   );
 }
 
-function DayColumn({ day, items, onOpenTask }){
+function DayColumn({ day, items, onOpenTask, onCreateSelection }){
+  const colRef = useRef(null);
+  const [draft, setDraft] = useState(null); // { top, height }
+  const [dragState, setDragState] = useState(null); // { id, mode: 'move'|'resize', startY, origStartMin, origDuration }
+
+  // Helpers
+  const pxToMin = (y) => Math.max(0, Math.min(24*60, Math.round(y / MINUTE_PX)));
+
+  // Selection to create
+  const onMouseDown = (e) => {
+    if (e.target.closest('.task-block')) return; // don't start selection on task
+    const rect = colRef.current.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const startMin = snapMin(pxToMin(y));
+    setDraft({ top: startMin * MINUTE_PX, height: SNAP_MIN * MINUTE_PX, startMin, duration: SNAP_MIN });
+
+    const onMove = (ev) => {
+      const yy = Math.max(0, Math.min(rect.height, ev.clientY - rect.top));
+      const curMin = snapMin(pxToMin(yy));
+      const dur = Math.max(SNAP_MIN, curMin - startMin);
+      setDraft({ top: startMin * MINUTE_PX, height: dur * MINUTE_PX, startMin, duration: dur });
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      if (draft) {
+        const start = draft.startMin;
+        const dur = Math.max(SNAP_MIN, draft.duration);
+        onCreateSelection(day, start, dur);
+      } else {
+        onCreateSelection(day, startMin, SNAP_MIN);
+      }
+      setDraft(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp, { once: true });
+  };
+
+  // Drag/resize existing task
+  const startMove = (t, e) => {
+    e.stopPropagation();
+    const rect = colRef.current.getBoundingClientRect();
+    const [hh, mm] = (t.due_time || "00:00").split(":").map(Number);
+    const startMin = (hh*60 + mm);
+    setDragState({ id: t.id, mode: 'move', startY: e.clientY - rect.top, origStartMin: startMin, origDuration: t.duration_minutes || 60 });
+    const onMove = (ev) => {
+      const dy = ev.clientY - rect.top - dragState.startY;
+      const dmin = snapMin(pxToMin(dy)) - snapMin(pxToMin(0));
+      const newStart = Math.max(0, Math.min(24*60 - (dragState?.origDuration||60), dragState.origStartMin + dmin));
+      setDragState((s)=> ({ ...s, previewStart: newStart }));
+    };
+    const onUp = async () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      const newStart = dragState?.previewStart ?? startMin;
+      const newTime = hhmm(newStart);
+      await onPatchTask(t.id, { due_time: newTime });
+      setDragState(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp, { once: true });
+  };
+  const startResize = (t, e) => {
+    e.stopPropagation();
+    const rect = colRef.current.getBoundingClientRect();
+    const origDur = t.duration_minutes || 60;
+    const startY = e.clientY - rect.top;
+    setDragState({ id: t.id, mode: 'resize', startY, origStartMin: null, origDuration: origDur });
+    const onMove = (ev) => {
+      const dy = ev.clientY - rect.top - startY;
+      const dmin = snapMin(pxToMin(dy));
+      const newDur = Math.max(SNAP_MIN, origDur + dmin);
+      setDragState((s)=> ({ ...s, previewDuration: newDur }));
+    };
+    const onUp = async () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      const newDur = dragState?.previewDuration ?? origDur;
+      await onPatchTask(t.id, { duration_minutes: newDur });
+      setDragState(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp, { once: true });
+  };
+
+  // Patch helper via custom event to parent (set in window)
+  const onPatchTask = async (id, patch) => {
+    // Dispatch custom event the parent listens to
+    const evt = new CustomEvent('quest:patch', { detail: { id, patch } });
+    window.dispatchEvent(evt);
+  };
+
   const renderHourLines = () => Array.from({length:24}, (_,h) => (
     <div key={h} className="time-hour-line" style={{ top: h * HOUR_HEIGHT }} />
   ));
+
   const renderTaskBlock = (t) => {
     const [hh, mm] = (t.due_time || "00:00").split(":").map(Number);
-    const top = (hh*60 + mm) * MINUTE_PX;
-    const height = Math.max(22, 30);
+    let startMin = (hh*60 + mm);
+    let dur = t.duration_minutes || 60;
+    if (dragState && dragState.id === t.id) {
+      if (dragState.mode === 'move' && typeof dragState.previewStart === 'number') startMin = dragState.previewStart;
+      if (dragState.mode === 'resize' && typeof dragState.previewDuration === 'number') dur = dragState.previewDuration;
+    }
+    const top = startMin * MINUTE_PX;
+    const height = Math.max(22, dur * MINUTE_PX);
+    const endMin = startMin + dur;
+    const label = `${hhmm(startMin)}–${hhmm(endMin)}`;
     return (
-      <div key={t.id} className="task-block" style={{ top, height }} title={t.quest_name} onClick={()=>onOpenTask(t)}>
-        {t.quest_name} {t.due_time ? `(${t.due_time})` : ''}
+      <div key={t.id} className={`task-block ${dragState && dragState.id===t.id ? 'dragging':''}`} style={{ top, height }} title={t.quest_name} onMouseDown={(e)=>startMove(t,e)} onClick={()=>onOpenTask(t)}>
+        <span className="task-time">{t.due_time ? label : ''}</span>{t.quest_name}
+        <div className="resize-handle" onMouseDown={(e)=>startResize(t,e)} />
       </div>
     );
   };
+
   const nowLine = () => {
     const todayKey = ymd(new Date());
     if (ymd(day) !== todayKey) return null;
@@ -269,27 +370,68 @@ function DayColumn({ day, items, onOpenTask }){
       </div>
     );
   };
+
   return (
-    <div className="time-col">
+    <div ref={colRef} className="time-col" onMouseDown={onMouseDown}>
       {renderHourLines()}
       {items.map(renderTaskBlock)}
+      {draft ? <div className="draft-block" style={{ top: draft.top, height: draft.height }} /> : null}
       {nowLine()}
     </div>
   );
 }
 
-function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask }){
+function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection }){
   if (view === 'month') {
     return <MonthCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} />
   }
-  return <TimeCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} />
+  return <TimeCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} onCreateSelection={onCreateSelection} />
 }
 
-function TaskEditModal({ open, task, onClose, onSave, onDelete }){
+function DeleteScopeModal({ open, onClose, onDeleteOnly, onDeleteAll }){
+  if(!open) return null;
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header"><h3>Delete event</h3><button className="btn secondary" onClick={onClose}>Close</button></div>
+        <div style={{display:'flex', flexDirection:'column', gap:8}}>
+          <button className="btn secondary" onClick={onDeleteOnly}>Delete this event only</button>
+          <button className="btn secondary" onClick={onDeleteAll}>Delete this event and its recurrence</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence, onRemoveRecurrence }){
+  const api = useApi();
   const [name, setName] = useState(task?.quest_name || "");
   const [due, setDue] = useState(task?.due_date || "");
   const [dueTime, setDueTime] = useState(task?.due_time || "");
-  useEffect(()=>{ setName(task?.quest_name || ""); setDue(task?.due_date || ""); setDueTime(task?.due_time || ""); }, [task]);
+  const [duration, setDuration] = useState(task?.duration_minutes || 60);
+  const [repeatMode, setRepeatMode] = useState('none');
+  const [weeklyDays, setWeeklyDays] = useState('');
+
+  useEffect(()=>{ setName(task?.quest_name || ""); setDue(task?.due_date || ""); setDueTime(task?.due_time || ""); setDuration(task?.duration_minutes || 60); }, [task]);
+  useEffect(()=>{
+    let mounted = true;
+    const loadRec = async () => {
+      if (!task?.id) return;
+      try{
+        const { data } = await api.get(`/quests/active/${task.id}/recurrence`);
+        if(!mounted) return;
+        if (data && data.frequency){
+          setRepeatMode(data.frequency);
+          if (data.frequency === 'Weekly') setWeeklyDays(data.days || ''); else setWeeklyDays('');
+        } else {
+          setRepeatMode('none'); setWeeklyDays('');
+        }
+      }catch{}
+    };
+    loadRec();
+    return () => { mounted = false; }
+  }, [task]);
+
   if(!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -298,100 +440,57 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete }){
           <h3>Edit Task</h3>
           <button className="btn secondary" onClick={onClose}>Close</button>
         </div>
-        <div className="row" style={{marginBottom:8}}>
+        <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
           <input className="input" placeholder="Task name" value={name} onChange={e=>setName(e.target.value)} />
           <input className="input" type="date" value={due} onChange={e=>setDue(e.target.value)} />
           <input className="input" type="time" value={dueTime} onChange={e=>setDueTime(e.target.value)} />
+          <input className="input" type="number" min={15} step={15} value={duration} onChange={e=>setDuration(Number(e.target.value||60))} />
+        </div>
+        <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
+          <select value={repeatMode} onChange={e=>setRepeatMode(e.target.value)}>
+            <option value="none">Does not repeat</option>
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Weekdays">Weekdays</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Annual">Annual</option>
+          </select>
+          {repeatMode==='Weekly' && (
+            <input className="input" placeholder="Days (Mon, Wed)" value={weeklyDays} onChange={e=>setWeeklyDays(e.target.value)} />
+          )}
         </div>
         <div className="modal-actions">
           <button className="btn secondary" onClick={()=>onDelete(task)}>Delete</button>
-          <button className="btn" onClick={()=>onSave({ ...task, quest_name: name, due_date: due, due_time: dueTime || null })}>Save</button>
+          <button className="btn" onClick={()=>{
+            onSave({ ...task, quest_name: name, due_date: due, due_time: dueTime || null, duration_minutes: duration });
+            if (repeatMode==='none') {
+              onRemoveRecurrence(task);
+            } else {
+              const body = { frequency: repeatMode, days: repeatMode==='Weekly'? weeklyDays : undefined };
+              onSaveRecurrence(task, body);
+            }
+          }}>Save</button>
         </div>
       </div>
     </div>
   );
 }
 
-
-function CustomRepeatModal({ open, baseDate, onClose, onSave }){
-  const d = baseDate || new Date();
-  const [freq, setFreq] = useState('Daily');
-  const [interval, setInterval] = useState(1);
-  const [monthlyMode, setMonthlyMode] = useState('date');
-  const [monthlyWeekIndex, setMonthlyWeekIndex] = useState(1); // 1..5 or -1
-  const [monthlyWeekday, setMonthlyWeekday] = useState(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);
-  const [monthlyOnDate, setMonthlyOnDate] = useState(d.getDate());
-  const [ends, setEnds] = useState('never');
-  const [untilDate, setUntilDate] = useState('');
-  const [count, setCount] = useState(0);
-
-  if (!open) return null;
+function QuickCreateModal({ open, pos, dateStr, startMin, duration, onClose, onCreate }){
+  const [title, setTitle] = useState("");
+  const [rank, setRank] = useState("Common");
+  if(!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Custom Repeat</h3>
-          <button className="btn secondary" onClick={onClose}>Close</button>
-        </div>
-        <div className="row" style={{flexWrap:'wrap', marginBottom:8}}>
-          <select value={freq} onChange={e=>setFreq(e.target.value)}>
-            {['Daily','Weekly','Weekdays','Monthly','Annual'].map(f=> <option key={f}>{f}</option>)}
-          </select>
-          <input className="input" type="number" min={1} value={interval} onChange={e=>setInterval(Number(e.target.value||1))} />
-          <span className="small">Every N {freq.toLowerCase()}</span>
-        </div>
-        {freq==='Weekly' && (
-          <div className="row" style={{marginBottom:8}}>
-            <span className="small">Days (Mon, Wed):</span>
-            <input className="input" placeholder="Mon, Wed" id="weekly-days-input" />
-            <span className="small">You can edit later in Recurring</span>
-          </div>
-        )}
-        {freq==='Monthly' && (
-          <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
-            <select value={monthlyMode} onChange={e=>setMonthlyMode(e.target.value)}>
-              <option value="date">On day {monthlyOnDate}</option>
-              <option value="weekday">On the nth weekday</option>
-            </select>
-            {monthlyMode==='date' ? (
-              <input className="input" type="number" min={1} max={31} value={monthlyOnDate} onChange={e=>setMonthlyOnDate(Number(e.target.value||1))} />
-            ) : (
-              <>
-                <select value={monthlyWeekIndex} onChange={e=>setMonthlyWeekIndex(Number(e.target.value))}>
-                  {[1,2,3,4,5,-1].map(n=> <option key={n} value={n}>{n===-1?'Last':`${n}th`}</option>)}
-                </select>
-                <select value={monthlyWeekday} onChange={e=>setMonthlyWeekday(e.target.value)}>
-                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=> <option key={w}>{w}</option>)}
-                </select>
-              </>
-            )}
-          </div>
-        )}
-        <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
-          <select value={ends} onChange={e=>setEnds(e.target.value)}>
-            <option value="never">Ends: Never</option>
-            <option value="on_date">Ends: On date</option>
-            <option value="after">Ends: After N</option>
-          </select>
-          {ends==='on_date' && (<input className="input" type="date" value={untilDate} onChange={e=>setUntilDate(e.target.value)} />)}
-          {ends==='after' && (<input className="input" type="number" min={1} value={count} onChange={e=>setCount(Number(e.target.value||0))} />)}
+        <div className="modal-header"><h3>Quick Add</h3><button className="btn secondary" onClick={onClose}>Close</button></div>
+        <div className="row" style={{flexWrap:'wrap'}}>
+          <input className="input" placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} />
+          <select value={rank} onChange={e=>setRank(e.target.value)}>{ranks.map(r=> <option key={r} value={r}>{r}</option>)}</select>
+          <span className="small">{dateStr} {hhmm(startMin)}–{hhmm(startMin+duration)}</span>
         </div>
         <div className="modal-actions">
-          <button className="btn" onClick={()=>{
-            onSave({
-              frequency: freq,
-              interval,
-              monthly_mode: freq==='Monthly'? monthlyMode : undefined,
-              monthly_on_date: freq==='Monthly' && monthlyMode==='date'? monthlyOnDate : undefined,
-              monthly_week_index: freq==='Monthly' && monthlyMode==='weekday'? monthlyWeekIndex : undefined,
-              monthly_weekday: freq==='Monthly' && monthlyMode==='weekday'? monthlyWeekday : undefined,
-              ends,
-              until_date: ends==='on_date' && untilDate ? untilDate : undefined,
-              count: ends==='after' && count ? count : undefined,
-              days: freq==='Weekly' ? document.getElementById('weekly-days-input')?.value : undefined,
-            });
-            onClose();
-          }}>Save</button>
+          <button className="btn" onClick={()=> onCreate({ title, rank })} disabled={!title}>Create</button>
         </div>
       </div>
     </div>
@@ -400,7 +499,7 @@ function CustomRepeatModal({ open, baseDate, onClose, onSave }){
 
 function ActiveQuests({ hideExtras=false }){
   const api = useApi();
-  const { summary, refresh: refreshXP } = useXPSummary();
+  const { summary } = useXPSummary();
   const [list, setList] = useState([]);
 
   // calendar state
@@ -408,11 +507,14 @@ function ActiveQuests({ hideExtras=false }){
   const [anchorDate, setAnchorDate] = useState(new Date());
 
   const [form, setForm] = useState({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
-  const [repeat, setRepeat] = useState('none'); // none | daily | weekly_on | weekdays | monthly_on_date | annual | custom
+  const [repeat, setRepeat] = useState('none'); // existing quick add select
+
+  // Quick create from selection
+  const [quick, setQuick] = useState({ open:false, dateStr:'', startMin:0, duration:60 });
 
   const fetchAll = async () => {
     const q = await api.get(`/quests/active`);
-    // sort by due_date then due_time (empty first)
+    // sort by due_date then due_time
     const sorted = [...q.data].sort((a,b) => {
       const da = new Date(a.due_date + 'T00:00:00').getTime();
       const db = new Date(b.due_date + 'T00:00:00').getTime();
@@ -426,18 +528,28 @@ function ActiveQuests({ hideExtras=false }){
 
   useEffect(() => { fetchAll(); }, []);
 
+  // Global patch listener used by DayColumn drag/resize
+  useEffect(()=>{
+    const handler = async (e) => {
+      const { id, patch } = e.detail;
+      await api.patch(`/quests/active/${id}`, patch);
+      await fetchAll();
+    };
+    window.addEventListener('quest:patch', handler);
+    return () => window.removeEventListener('quest:patch', handler);
+  }, []);
+
   const onCreate = async (e) => {
     e.preventDefault();
     if(!form.quest_name || !form.due_date) return;
-    await api.post(`/quests/active`, { ...form, due_time: form.due_time || null });
-    // If repeating, create a recurring rule mirroring Google Calendar presets
+    await api.post(`/quests/active`, { ...form, due_time: form.due_time || null, duration_minutes: 60 });
+    // Handle repeating presets like before
     try {
       const d = new Date(form.due_date + 'T00:00:00');
       let recurringBody = null;
       if (repeat === 'daily') {
         recurringBody = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: 'Daily', status: form.status };
       } else if (repeat === 'weekly_on') {
-        // store human weekday label e.g. Mon
         const wk = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
         recurringBody = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: 'Weekly', days: wk, status: form.status };
       } else if (repeat === 'weekdays') {
@@ -455,7 +567,24 @@ function ActiveQuests({ hideExtras=false }){
     await fetchAll();
   };
 
-  const markCompleted = async (id) => { await api.post(`/quests/active/${id}/complete`); await Promise.all([fetchAll(), refreshXP()]); };
+  // Create from selection
+  const onCreateSelection = (dayDate, startMin, duration) => {
+    setQuick({ open:true, dateStr: ymd(dayDate), startMin, duration });
+  };
+  const confirmQuickCreate = async ({ title, rank }) => {
+    await api.post(`/quests/active`, {
+      quest_name: title,
+      quest_rank: rank,
+      due_date: quick.dateStr,
+      due_time: hhmm(quick.startMin),
+      duration_minutes: quick.duration,
+      status: 'Pending'
+    });
+    setQuick({ ...quick, open:false });
+    await fetchAll();
+  };
+
+  const markCompleted = async (id) => { await api.post(`/quests/active/${id}/complete`); await fetchAll(); };
   const markIncomplete = async (id) => { await api.post(`/quests/active/${id}/mark-incomplete`); await fetchAll(); };
   const updateRow = async (id, patch) => { await api.patch(`/quests/active/${id}`, patch); await fetchAll(); };
   const deleteRow = async (id) => { await api.delete(`/quests/active/${id}`); await fetchAll(); };
@@ -485,18 +614,34 @@ function ActiveQuests({ hideExtras=false }){
 
   // Modal state
   const [editing, setEditing] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState({ open:false, task:null });
   const openTask = (task) => setEditing(task);
   const closeTask = () => setEditing(null);
-  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null }); closeTask(); };
-  const deleteTask = async (task) => { await deleteRow(task.id); closeTask(); };
+  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null, duration_minutes: task.duration_minutes || 60 }); closeTask(); };
+  const deleteTask = async (task) => { setConfirmDelete({ open:true, task }); };
 
-  const [openCustom, setOpenCustom] = useState(false);
+  const onDeleteOnly = async () => {
+    const t = confirmDelete.task; setConfirmDelete({ open:false, task:null });
+    await deleteRow(t.id);
+    closeTask();
+  };
+  const onDeleteAll = async () => {
+    const t = confirmDelete.task; setConfirmDelete({ open:false, task:null });
+    try{
+      await api.delete(`/quests/active/${t.id}/recurrence`, { params: { delete_rule: true } });
+    }catch{}
+    await deleteRow(t.id);
+    closeTask();
+  };
+
+  // Recurrence handlers from edit modal
+  const saveRecurrence = async (task, body) => { try{ await api.put(`/quests/active/${task.id}/recurrence`, body); }catch{} };
+  const removeRecurrence = async (task) => { try{ await api.delete(`/quests/active/${task.id}/recurrence`, { params: { delete_rule: true } }); }catch{} };
 
   return (
     <div className="app-shell">
       {/* Sidebar with all features (non-collapsible) */}
       <div className="sidebar">
-        <XPBadge summary={summary} />
         <div style={{height:12}} />
         <MiniMonth selectedDate={anchorDate} onSelect={(d)=>{ setAnchorDate(d); setView('day'); }} />
 
@@ -508,17 +653,6 @@ function ActiveQuests({ hideExtras=false }){
             <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>{ranks.map(r=> <option key={r} value={r}>{r}</option>)}</select>
             <input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} />
             <input type="time" className="input" value={form.due_time} onChange={e=>setForm({...form, due_time: e.target.value})} />
-            <select value={repeat} onChange={e=>{
-              const val = e.target.value; setRepeat(val); if(val==='custom') setOpenCustom(true);
-            }}>
-              <option value="none">Does not repeat</option>
-              <option value="daily">Daily</option>
-              <option value="weekly_on">Weekly on weekday</option>
-              <option value="weekdays">Every weekday</option>
-              <option value="monthly_on_date">Monthly on date</option>
-              <option value="annual">Annually</option>
-              <option value="custom">Custom…</option>
-            </select>
             <button className="btn" onClick={onCreate}>Add</button>
           </div>
         </div>
@@ -534,38 +668,12 @@ function ActiveQuests({ hideExtras=false }){
           </div>
         </div>
 
-        {/* Custom repeat modal */}
-        <CustomRepeatModal open={openCustom} baseDate={new Date(form.due_date || new Date())} onClose={()=>setOpenCustom(false)} onSave={(cfg)=>{
-          // translate to backend payload and create recurring rule immediately
-          try{
-            const body = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: cfg.frequency, status: form.status };
-            if (cfg.interval) body.interval = cfg.interval;
-            if (cfg.frequency==='Weekly' && cfg.days) body.days = cfg.days;
-            if (cfg.frequency==='Monthly'){
-              if (cfg.monthly_mode==='weekday'){
-                body.monthly_mode = 'weekday';
-                body.monthly_week_index = cfg.monthly_week_index;
-                body.monthly_weekday = cfg.monthly_weekday;
-              } else {
-                body.monthly_on_date = cfg.monthly_on_date;
-              }
-            }
-            if (cfg.ends) body.ends = cfg.ends;
-            if (cfg.until_date) body.until_date = cfg.until_date;
-            if (cfg.count) body.count = cfg.count;
-            // store a signal in repeat state so onCreate doesn't duplicate recurring
-            setRepeat('none');
-            useApi().post(`/recurring`, body);
-          }catch(e){}
-        }} />
-
       </div>
 
       {/* Main calendar pane */}
       <div className="main-pane">
         <div className="row" style={{justifyContent: 'space-between', marginBottom:12}}>
           <h2>Calendar</h2>
-          <XPBadge summary={summary} />
         </div>
         <Calendar
           tasks={list}
@@ -576,6 +684,7 @@ function ActiveQuests({ hideExtras=false }){
           onToday={onToday}
           onViewChange={setView}
           onOpenTask={openTask}
+          onCreateSelection={onCreateSelection}
         />
 
         {/* Under-calendar table like agenda */}
@@ -619,7 +728,7 @@ function ActiveQuests({ hideExtras=false }){
                     </select>
                   </td>
                   <td>
-                    <button className="btn secondary" onClick={()=>markCompleted(row.id)}>Complete</button>
+                    <button className="btn secondary" onClick={()=>openTask(row)}>Edit</button>
                   </td>
                 </tr>
               ))}
@@ -627,8 +736,18 @@ function ActiveQuests({ hideExtras=false }){
           </table>
         </div>
 
-        {/* Modal for editing */}
-        <TaskEditModal open={!!editing} task={editing} onClose={closeTask} onSave={saveTask} onDelete={deleteTask} />
+        {/* Modals */}
+        <TaskEditModal 
+          open={!!editing} 
+          task={editing} 
+          onClose={closeTask} 
+          onSave={saveTask} 
+          onDelete={deleteTask}
+          onSaveRecurrence={saveRecurrence}
+          onRemoveRecurrence={removeRecurrence}
+        />
+        <DeleteScopeModal open={confirmDelete.open} onClose={()=>setConfirmDelete({ open:false, task:null })} onDeleteOnly={onDeleteOnly} onDeleteAll={onDeleteAll} />
+        <QuickCreateModal open={quick.open} dateStr={quick.dateStr} startMin={quick.startMin} duration={quick.duration} onClose={()=>setQuick({...quick, open:false})} onCreate={confirmQuickCreate} />
       </div>
     </div>
   );
