@@ -686,6 +686,7 @@ function ActiveQuests({ hideExtras=false }){
           onViewChange={setView}
           onOpenTask={openTask}
           onCreateSelection={onCreateSelection}
+          onCreateAtDay={onCreateAtDay}
         />
 
         {/* Under-calendar table like agenda */}
