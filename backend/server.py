@@ -378,8 +378,10 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
     if freq == 'Weekdays':
         return today.weekday() < 5
     if freq == 'Monthly':
-        # Run on the same day-of-month as when it was created if last_added is None,
-        # else run once per new calendar month
+        # Monthly on specific date if provided else once per new calendar month
+        monthly_on_date = task.get('monthly_on_date')
+        if monthly_on_date:
+            return today.day == int(monthly_on_date)
         last_added = task.get('last_added')
         if last_added is None:
             return True
@@ -391,6 +393,13 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
         parts = [p.strip() for p in days_str.split(',') if p.strip()]
         indices = {WEEKDAY_INDEX.get(p) for p in parts if WEEKDAY_INDEX.get(p) is not None}
         return today.weekday() in indices
+    if freq == 'Annual':
+        # Annual on exact month/day match vs task creation last_added month/day if present
+        last_added = task.get('last_added')
+        if last_added is None:
+            # assume created today; run today only if created today and no monthly_on_date
+            return True
+        return (today.month, today.day) == (last_added.month, last_added.day)
     return False
 
 @api_router.post("/recurring/run")
