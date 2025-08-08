@@ -102,6 +102,18 @@ frontend:
         agent: "main"
         comment: "Added redeem button in store, inventory list with Use action and used status; wired to new backend APIs."
 metadata:
+  - task: "Show current XP only and add reward animations"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "XPBadge shows only balance; Rewards page header includes current XP; added minimalist B&W confetti animation on redeem/use; XP refreshes after actions."
+
   created_by: "main_agent"
   version: "1.0"
   test_sequence: 6
