@@ -46,7 +46,7 @@ function MiniMonth({selectedDate, onSelect}){
       <div className="mini-header">
         <button className="btn secondary" onClick={()=>setCurrent(new Date(current.getFullYear(), current.getMonth()-1, 1))}>◀</button>
         <div>{title}</div>
-        <button className="btn secondary" onClick={()=&gt;setCurrent(new Date(current.getFullYear(), current.getMonth()+1, 1))}>▶</button>
+        <button className="btn secondary" onClick={()=>setCurrent(new Date(current.getFullYear(), current.getMonth()+1, 1))}>▶</button>
       </div>
       <div className="mini-grid">
         {weekdays.map(w =&gt; <div key={w} className="mini-dow">{w}</div>)}
