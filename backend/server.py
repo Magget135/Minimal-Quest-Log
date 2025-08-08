@@ -90,8 +90,9 @@ class RecurringTask(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     task_name: str
     quest_rank: Literal['Common', 'Rare', 'Epic', 'Legendary']
-    frequency: Literal['Daily', 'Weekly', 'Weekdays', 'Monthly']
+    frequency: Literal['Daily', 'Weekly', 'Weekdays', 'Monthly', 'Annual']
     days: Optional[str] = None  # e.g., "Mon, Fri" for Weekly
+    monthly_on_date: Optional[int] = None  # 1..31 for Monthly
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
     last_added: Optional[date] = None
 
