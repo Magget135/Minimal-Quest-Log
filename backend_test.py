@@ -10,7 +10,7 @@ from datetime import datetime, date, timedelta
 import sys
 
 # Use the production backend URL from frontend/.env
-BASE_URL = "https://6527a185-09d4-4f63-b7cf-554b078bd868.preview.emergentagent.com/api"
+BASE_URL = "https://b937f364-bd47-4b7d-b200-2445da7545ea.preview.emergentagent.com/api"
 
 class QuestTrackerTester:
     def __init__(self):
