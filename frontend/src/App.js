@@ -246,6 +246,7 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
   const colRef = useRef(null);
   const [draft, setDraft] = useState(null); // { top, height }
   const [dragState, setDragState] = useState(null); // { id, mode: 'move'|'resize', startY, origStartMin, origDuration }
+  const movedRef = useRef(false);
 
   // Helpers
   const pxToMin = (y) => Math.max(0, Math.min(24*60, Math.round(y / MINUTE_PX)));
