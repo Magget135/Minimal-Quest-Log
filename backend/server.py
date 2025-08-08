@@ -363,6 +363,13 @@ async def upsert_recurring(task: RecurringUpsert):
             "frequency": task.frequency,
             "days": task.days,
             "monthly_on_date": task.monthly_on_date,
+            "interval": task.interval,
+            "monthly_mode": task.monthly_mode,
+            "monthly_week_index": task.monthly_week_index,
+            "monthly_weekday": task.monthly_weekday,
+            "ends": task.ends,
+            "until_date": task.until_date,
+            "count": task.count,
             "status": task.status,
         }})
         updated = await db.Recurringtasks.find_one({"id": task.id}, {"_id": 0})
@@ -373,7 +380,15 @@ async def upsert_recurring(task: RecurringUpsert):
         frequency=task.frequency,
         days=task.days,
         monthly_on_date=task.monthly_on_date,
+        interval=task.interval,
+        monthly_mode=task.monthly_mode,
+        monthly_week_index=task.monthly_week_index,
+        monthly_weekday=task.monthly_weekday,
+        ends=task.ends,
+        until_date=task.until_date,
+        count=task.count,
         status=task.status,
+        start_date=datetime.now(timezone.utc).date(),
     )
     task_data = serialize_dates_for_mongo(new_task.dict())
     await db.Recurringtasks.insert_one(task_data)
