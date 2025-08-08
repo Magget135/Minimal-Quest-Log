@@ -352,6 +352,7 @@ async def upsert_recurring(task: RecurringUpsert):
         quest_rank=task.quest_rank,
         frequency=task.frequency,
         days=task.days,
+        monthly_on_date=task.monthly_on_date,
         status=task.status,
     )
     task_data = serialize_dates_for_mongo(new_task.dict())
