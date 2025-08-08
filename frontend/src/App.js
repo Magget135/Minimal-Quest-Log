@@ -600,7 +600,7 @@ function Rewards(){
             <tr><th>Date Redeemed</th><th>Reward</th><th>XP Cost</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {inventory.map(item => (
+            {inventory.filter(i=>!i.used).map(item => (
               <tr key={item.id}>
                 <td>{fmt(item.date_redeemed)}</td>
                 <td>{item.reward_name}</td>
@@ -609,9 +609,7 @@ function Rewards(){
                 <td>
                   {!item.used ? (
                     <button className="btn" onClick={()=>useReward(item.id)}>Use</button>
-                  ) : (
-                    <span className="small">Used at {fmt(item.used_at)}</span>
-                  )}
+                  ) : null}
                 </td>
               </tr>
             ))}
