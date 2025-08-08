@@ -492,14 +492,16 @@ function Rewards(){
   const api = useApi();
   const [store, setStore] = useState([]);
   const [log, setLog] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [form, setForm] = useState({ reward_name: "", xp_cost: 25 });
 
   const load = async () => {
-    const [s, l] = await Promise.all([
+    const [s, l, inv] = await Promise.all([
       api.get(`/rewards/store`),
-      api.get(`/rewards/log`)
+      api.get(`/rewards/log`),
+      api.get(`/rewards/inventory`)
     ]);
-    setStore(s.data); setLog(l.data);
+    setStore(s.data); setLog(l.data); setInventory(inv.data);
   };
   useEffect(()=>{ load(); },[]);
 
@@ -511,6 +513,23 @@ function Rewards(){
     await load();
   };
   const del = async (id) => { await api.delete(`/rewards/store/${id}`); await load(); };
+
+  const redeem = async (id) => {
+    try{
+      await api.post(`/rewards/redeem`, { reward_id: id });
+      await load();
+    }catch(err){
+      alert(err?.response?.data?.detail || 'Unable to redeem');
+    }
+  };
+  const useReward = async (id) => {
+    try{
+      await api.post(`/rewards/use/${id}`);
+      await load();
+    }catch(err){
+      alert(err?.response?.data?.detail || 'Unable to use reward');
+    }
+  };
 
   const fmt = (iso) => new Date(iso).toLocaleString();
 
@@ -527,6 +546,7 @@ function Rewards(){
       </form>
 
       <div className="card" style={{marginTop:16}}>
+        <h3 className="kicker">Reward Store</h3>
         <table className="table">
           <thead>
             <tr><th>Reward</th><th>XP Cost</th><th>Actions</th></tr>
@@ -536,7 +556,36 @@ function Rewards(){
               <tr key={s.id}>
                 <td>{s.reward_name}</td>
                 <td>{s.xp_cost}</td>
-                <td><button className="btn secondary" onClick={()=>del(s.id)}>Delete</button></td>
+                <td style={{display:'flex', gap:8}}>
+                  <button className="btn" onClick={()=>redeem(s.id)}>Redeem</button>
+                  <button className="btn secondary" onClick={()=>del(s.id)}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card" style={{marginTop:16}}>
+        <h3 className="kicker">My Redeemed Rewards</h3>
+        <table className="table">
+          <thead>
+            <tr><th>Date Redeemed</th><th>Reward</th><th>XP Cost</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {inventory.map(item => (
+              <tr key={item.id}>
+                <td>{fmt(item.date_redeemed)}</td>
+                <td>{item.reward_name}</td>
+                <td>{item.xp_cost}</td>
+                <td>{item.used ? 'Used' : 'Available'}</td>
+                <td>
+                  {!item.used ? (
+                    <button className="btn" onClick={()=>useReward(item.id)}>Use</button>
+                  ) : (
+                    <span className="small">Used at {fmt(item.used_at)}</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
