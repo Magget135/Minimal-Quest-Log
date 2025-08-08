@@ -427,6 +427,7 @@ function ActiveQuests({ hideExtras=false }){
               <option value="weekdays">Every weekday</option>
               <option value="monthly_on_date">Monthly on date</option>
               <option value="annual">Annually</option>
+              <option value="custom">Custom…</option>
             </select>
             <button className="btn" onClick={onCreate}>Add</button>
           </div>
