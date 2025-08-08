@@ -439,33 +439,69 @@ async def delete_recurring(task_id: str):
 
 def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
     freq = task.get('frequency')
+    interval = int(task.get('interval') or 1)
+    start = task.get('start_date') or today
+    occurrences = int(task.get('occurrences') or 0)
+
+    # End rules
+    ends = task.get('ends') or 'never'
+    if ends == 'on_date':
+        until = task.get('until_date')
+        if until and today > until:
+            return False
+    if ends == 'after':
+        cnt = int(task.get('count') or 0)
+        if cnt and occurrences >= cnt:
+            return False
+
     if freq == 'Daily':
-        return True
+        # every N days
+        delta_days = (today - start).days
+        return delta_days >= 0 and delta_days % max(1, interval) == 0
+
     if freq == 'Weekdays':
         return today.weekday() < 5
-    if freq == 'Monthly':
-        # Monthly on specific date if provided else once per new calendar month
-        monthly_on_date = task.get('monthly_on_date')
-        if monthly_on_date:
-            return today.day == int(monthly_on_date)
-        last_added = task.get('last_added')
-        if last_added is None:
-            return True
-        return (today.year, today.month) != (last_added.year, last_added.month)
+
     if freq == 'Weekly':
+        # every N weeks on selected days
         days_str = (task.get('days') or '').strip()
         if not days_str:
             return False
         parts = [p.strip() for p in days_str.split(',') if p.strip()]
         indices = {WEEKDAY_INDEX.get(p) for p in parts if WEEKDAY_INDEX.get(p) is not None}
-        return today.weekday() in indices
+        if today.weekday() not in indices:
+            return False
+        weeks = ((today - start).days) // 7
+        return weeks >= 0 and weeks % max(1, interval) == 0
+
+    if freq == 'Monthly':
+        monthly_mode = task.get('monthly_mode') or ('date' if task.get('monthly_on_date') else None)
+        if monthly_mode == 'weekday':
+            idx = int(task.get('monthly_week_index') or 1)
+            wd = task.get('monthly_weekday')
+            wd_idx = WEEKDAY_INDEX.get(wd) if wd else None
+            if wd_idx is None:
+                return False
+            # Check interval by months difference from start
+            m = months_between(start, today)
+            if m < 0 or (m % max(1, interval)) != 0:
+                return False
+            day = nth_weekday_day(today.year, today.month, wd_idx, idx)
+            return today.day == day
+        else:
+            # by date
+            target_day = int(task.get('monthly_on_date') or start.day)
+            m = months_between(start, today)
+            if m < 0 or (m % max(1, interval)) != 0:
+                return False
+            return today.day == target_day
+
     if freq == 'Annual':
-        # Annual on exact month/day match vs task creation last_added month/day if present
-        last_added = task.get('last_added')
-        if last_added is None:
-            # assume created today; run today only if created today and no monthly_on_date
-            return True
-        return (today.month, today.day) == (last_added.month, last_added.day)
+        y = years_between(start, today)
+        if y < 0 or (y % max(1, interval)) != 0:
+            return False
+        return (today.month, today.day) == (start.month, start.day)
+
     return False
 
 @api_router.post("/recurring/run")
