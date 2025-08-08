@@ -99,3 +99,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Please run backend quick regression for due_time support; will await user go-ahead before automated frontend tests."
+  - agent: "testing"
+    message: "Backend due_time regression completed successfully. Fixed backend bug where PATCH couldn't set due_time to null. All due_time functionality working: create (✅), list (✅), update (✅), remove/null (✅), recurring unaffected (✅). Ready for main agent to proceed with frontend testing or finalize."
