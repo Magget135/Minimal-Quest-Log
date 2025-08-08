@@ -140,7 +140,7 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
           const key = ymd(day);
           const items = tasks.filter(t => t.due_date === key);
           return (
-            <div key={idx} className="calendar-cell">
+            <div key={idx} className="calendar-cell" onDoubleClick={()=> onCreateAtDay && onCreateAtDay(day)}>
               <div className="calendar-day-number">{day.getDate()}</div>
               <div className="calendar-tasks">
                 {items.map(item => (
