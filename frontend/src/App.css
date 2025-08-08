@@ -1,4 +1,4 @@
-/* Black & White minimalist theme */
+/* Black &amp; White minimalist theme */
 :root { color-scheme: light; }
 html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .App { min-height: 100vh; }
@@ -8,7 +8,7 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .sidebar { position: sticky; top:60px; align-self:start; height: calc(100vh - 80px); overflow:auto; padding-bottom:24px; }
 .main-pane { min-height: 70vh; }
 
-/* Layout & common */
+/* Layout &amp; common */
 .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
 .navbar { border-bottom: 1px solid #e5e5e5; background: #fff; position: sticky; top: 0; z-index: 10; }
 .nav-brand { font-weight: 700; letter-spacing: -0.02em; }
@@ -109,3 +109,11 @@ html, body, #root { height: 100%; background: #ffffff; color: #111111; }
 .task-block { position:absolute; left:6px; right:6px; min-height:20px; border:1px solid #ececec; border-radius:12px; background:#fff; padding:4px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
 .time-now-line { position:absolute; left:0; right:0; height:1px; background:#111; box-shadow:0 0 0 1px #111 inset; }
 .time-now-dot { position:absolute; width:8px; height:8px; border-radius:999px; background:#111; left:-4px; top:-3px; }
+
+/* Reward animation (minimalist, B&amp;W) */
+.reward-anim-container { position: fixed; inset: 0; pointer-events: none; z-index: 9999; }
+.reward-confetti { position: absolute; background: var(--bg, #111); opacity: 0; animation: reward-burst 700ms ease-out forwards; }
+@keyframes reward-burst {
+  0% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.9) rotate(var(--rot)); }
+}
