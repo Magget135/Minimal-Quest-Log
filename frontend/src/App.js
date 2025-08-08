@@ -487,7 +487,7 @@ function QuickCreateModal({ open, dateStr, startMin, duration, allDay, onClose, 
         <div className="row" style={{flexWrap:'wrap'}}>
           <input className="input" placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} />
           <select value={rank} onChange={e=>setRank(e.target.value)}>{ranks.map(r=> <option key={r} value={r}>{r}</option>)}</select>
-          <span className="small">{dateStr} {hhmm(startMin)}–{hhmm(startMin+duration)}</span>
+          <span className="small">{dateStr} {allDay ? '(All-day)' : `${hhmm(startMin)}–${hhmm(startMin+duration)}`}</span>
         </div>
         <div className="modal-actions">
           <button className="btn" onClick={()=> onCreate({ title, rank })} disabled={!title}>Create</button>
