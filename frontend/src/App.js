@@ -49,13 +49,13 @@ function MiniMonth({selectedDate, onSelect}){
         <button className="btn secondary" onClick={()=>setCurrent(new Date(current.getFullYear(), current.getMonth()+1, 1))}>▶</button>
       </div>
       <div className="mini-grid">
-        {weekdays.map(w =&gt; <div key={w} className="mini-dow">{w}</div>)}
-        {cells.map((d, idx)=&gt;{
+        {weekdays.map(w => <div key={w} className="mini-dow">{w}</div>)}
+        {cells.map((d, idx)=>{
           const isOther = d.getMonth() !== current.getMonth();
           const key = ymd(d);
           const isSelected = ymd(selectedDate) === key;
           return (
-            <div key={idx} className={`mini-cell ${isOther?'other':''} ${isSelected?'selected':''}`} onClick={()=&gt;onSelect(d)}>
+            <div key={idx} className={`mini-cell ${isOther?'other':''} ${isSelected?'selected':''}`} onClick={()=>onSelect(d)}>
               {d.getDate()}
               {key===todayKey? <span className="dot-today" />: null}
             </div>
@@ -79,18 +79,18 @@ function XPBadge({ summary }){
 function useXPSummary(){
   const api = useApi();
   const [summary, setSummary] = useState({ total_earned: 0, total_spent: 0, balance: 0 });
-  const refresh = async () =&gt; {
+  const refresh = async () => {
     const { data } = await api.get(`/xp/summary`);
     setSummary(data);
   };
-  useEffect(() =&gt; { refresh(); }, []);
+  useEffect(() => { refresh(); }, []);
   return { summary, refresh };
 }
 
 // Date helpers
-const ymd = (d) =&gt; `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const startOfWeekMon = (d) =&gt; { const day = d.getDay(); const diff = (day === 0 ? -6 : 1) - day; const res = new Date(d); res.setDate(d.getDate()+diff); return new Date(res.getFullYear(), res.getMonth(), res.getDate()); };
-const addDays = (d, n) =&gt; { const res = new Date(d); res.setDate(d.getDate()+n); return res; };
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const startOfWeekMon = (d) => { const day = d.getDay(); const diff = (day === 0 ? -6 : 1) - day; const res = new Date(d); res.setDate(d.getDate()+diff); return new Date(res.getFullYear(), res.getMonth(), res.getDate()); };
+const addDays = (d, n) => { const res = new Date(d); res.setDate(d.getDate()+n); return res; };
 function startOfMonthGridMon(d){ const first = new Date(d.getFullYear(), d.getMonth(), 1); return startOfWeekMon(first); }
 
 const HOUR_HEIGHT = 48; // px
@@ -102,10 +102,10 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
 
   if (view === 'week') {
     const start = startOfWeekMon(anchorDate);
-    cells = Array.from({length:7}, (_,i)=&gt; addDays(start,i));
+    cells = Array.from({length:7}, (_,i)=> addDays(start,i));
   } else if (view === 'month') {
     const start = startOfMonthGridMon(anchorDate);
-    cells = Array.from({length:42}, (_,i)=&gt; addDays(start,i));
+    cells = Array.from({length:42}, (_,i)=> addDays(start,i));
   } else {
     cells = [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())];
   }
@@ -123,27 +123,27 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
             <button className="btn secondary" onClick={onNext}>Next</button>
           </div>
           <div className="calendar-controls">
-            <button className={`btn secondary`} onClick={()=&gt;onViewChange('day')}>Day</button>
-            <button className={`btn secondary`} onClick={()=&gt;onViewChange('week')}>Week</button>
-            <button className={`btn secondary`} onClick={()=&gt;onViewChange('month')}>Month</button>
+            <button className={`btn secondary`} onClick={()=>onViewChange('day')}>Day</button>
+            <button className={`btn secondary`} onClick={()=>onViewChange('week')}>Week</button>
+            <button className={`btn secondary`} onClick={()=>onViewChange('month')}>Month</button>
           </div>
         </div>
       </div>
-      {view !== 'day' &amp;&amp; (
+      {view !== 'day' && (
         <div className="month-headers">
-          {weekdays.map((w,i) =&gt; <div key={i} className="month-head-cell">{w}</div>)}
+          {weekdays.map((w,i) => <div key={i} className="month-head-cell">{w}</div>)}
         </div>
       )}
       <div className={`calendar-grid ${view}`}>
-        {cells.map((day, idx) =&gt; {
+        {cells.map((day, idx) => {
           const key = ymd(day);
-          const items = tasks.filter(t =&gt; t.due_date === key);
+          const items = tasks.filter(t => t.due_date === key);
           return (
             <div key={idx} className="calendar-cell">
               <div className="calendar-day-number">{day.getDate()}</div>
               <div className="calendar-tasks">
-                {items.map(item =&gt; (
-                  <div key={item.id} className="task-chip" title={item.quest_name} onClick={()=&gt;onOpenTask(item)}>
+                {items.map(item => (
+                  <div key={item.id} className="task-chip" title={item.quest_name} onClick={()=>onOpenTask(item)}>
                     {item.quest_name}
                   </div>
                 ))}
@@ -159,26 +159,26 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
 function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask}){
   const isWeek = view === 'week';
   const start = isWeek ? startOfWeekMon(anchorDate) : new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
-  const days = isWeek ? Array.from({length:7}, (_,i)=&gt; addDays(start,i)) : [start];
+  const days = isWeek ? Array.from({length:7}, (_,i)=> addDays(start,i)) : [start];
 
   const now = new Date();
 
   // Group tasks by date
   const byDate = Object.create(null);
-  days.forEach(d =&gt; { byDate[ymd(d)] = { timed: [], allDay: [] }; });
-  tasks.forEach(t =&gt; {
+  days.forEach(d => { byDate[ymd(d)] = { timed: [], allDay: [] }; });
+  tasks.forEach(t => {
     if (byDate[t.due_date]) {
       if (t.due_time) byDate[t.due_date].timed.push(t); else byDate[t.due_date].allDay.push(t);
     }
   });
-  Object.values(byDate).forEach(bucket =&gt; {
-    bucket.timed.sort((a,b)=&gt; (a.due_time||"00:00").localeCompare(b.due_time||"00:00"));
+  Object.values(byDate).forEach(bucket => {
+    bucket.timed.sort((a,b)=> (a.due_time||"00:00").localeCompare(b.due_time||"00:00"));
   });
 
-  const hours = Array.from({length:24}, (_,i)=&gt; i);
+  const hours = Array.from({length:24}, (_,i)=> i);
 
-  const dow = (d) =&gt; d.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase();
-  const dom = (d) =&gt; d.getDate();
+  const dow = (d) => d.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase();
+  const dom = (d) => d.getDate();
   const headerTitle = anchorDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   return (
@@ -192,9 +192,9 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
             <button className="btn secondary" onClick={onNext}>Next</button>
           </div>
           <div className="calendar-controls">
-            <button className={`btn secondary`} onClick={()=&gt;onViewChange('day')}>Day</button>
-            <button className={`btn secondary`} onClick={()=&gt;onViewChange('week')}>Week</button>
-            <button className={`btn secondary`} onClick={()=&gt;onViewChange('month')}>Month</button>
+            <button className={`btn secondary`} onClick={()=>onViewChange('day')}>Day</button>
+            <button className={`btn secondary`} onClick={()=>onViewChange('week')}>Week</button>
+            <button className={`btn secondary`} onClick={()=>onViewChange('month')}>Month</button>
           </div>
         </div>
       </div>
@@ -203,7 +203,7 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
         {/* Day headers */}
         <div className={`day-headers ${isWeek ? 'week' : 'day'}`}>
           <div className="day-head-cell" />
-          {days.map(d =&gt; (
+          {days.map(d => (
             <div key={ymd(d)} className="day-head-cell">
               <div className="day-head-inner">
                 <div className="dow">{dow(d)}</div>
@@ -216,11 +216,11 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
         {/* All-day row */}
         <div className={`all-day ${isWeek ? '' : 'day'}`}>
           <div className="label">All-day</div>
-          {days.map(d =&gt; (
+          {days.map(d => (
             <div key={ymd(d)} className="col">
               <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-                {byDate[ymd(d)].allDay.map(item =&gt; (
-                  <div key={item.id} className="task-chip" onClick={()=&gt;onOpenTask(item)}>{item.quest_name}</div>
+                {byDate[ymd(d)].allDay.map(item => (
+                  <div key={item.id} className="task-chip" onClick={()=>onOpenTask(item)}>{item.quest_name}</div>
                 ))}
               </div>
             </div>
@@ -230,11 +230,11 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
         {/* Time grid */}
         <div className={`time-grid ${isWeek ? 'week' : 'day'}`}>
           <div className="time-labels">
-            {hours.map(h =&gt; (
-              <div key={h} className="time-hour">{h === 0 ? '12 AM' : h &lt; 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`}</div>
+            {hours.map(h => (
+              <div key={h} className="time-hour">{h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h-12} PM`}</div>
             ))}
           </div>
-          {days.map(d =&gt; (
+          {days.map(d => (
             <DayColumn key={ymd(d)} day={d} items={byDate[ymd(d)].timed} onOpenTask={onOpenTask} />
           ))}
         </div>
@@ -244,20 +244,20 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
 }
 
 function DayColumn({ day, items, onOpenTask }){
-  const renderHourLines = () =&gt; Array.from({length:24}, (_,h) =&gt; (
+  const renderHourLines = () => Array.from({length:24}, (_,h) => (
     <div key={h} className="time-hour-line" style={{ top: h * HOUR_HEIGHT }} />
   ));
-  const renderTaskBlock = (t) =&gt; {
+  const renderTaskBlock = (t) => {
     const [hh, mm] = (t.due_time || "00:00").split(":").map(Number);
     const top = (hh*60 + mm) * MINUTE_PX;
     const height = Math.max(22, 30);
     return (
-      <div key={t.id} className="task-block" style={{ top, height }} title={t.quest_name} onClick={()=&gt;onOpenTask(t)}>
+      <div key={t.id} className="task-block" style={{ top, height }} title={t.quest_name} onClick={()=>onOpenTask(t)}>
         {t.quest_name} {t.due_time ? `(${t.due_time})` : ''}
       </div>
     );
   };
-  const nowLine = () =&gt; {
+  const nowLine = () => {
     const todayKey = ymd(new Date());
     if (ymd(day) !== todayKey) return null;
     const n = new Date();
@@ -293,19 +293,19 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete }){
   if(!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e=&gt;e.stopPropagation()}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
         <div className="modal-header">
           <h3>Edit Task</h3>
           <button className="btn secondary" onClick={onClose}>Close</button>
         </div>
         <div className="row" style={{marginBottom:8}}>
-          <input className="input" placeholder="Task name" value={name} onChange={e=&gt;setName(e.target.value)} />
-          <input className="input" type="date" value={due} onChange={e=&gt;setDue(e.target.value)} />
-          <input className="input" type="time" value={dueTime} onChange={e=&gt;setDueTime(e.target.value)} />
+          <input className="input" placeholder="Task name" value={name} onChange={e=>setName(e.target.value)} />
+          <input className="input" type="date" value={due} onChange={e=>setDue(e.target.value)} />
+          <input className="input" type="time" value={dueTime} onChange={e=>setDueTime(e.target.value)} />
         </div>
         <div className="modal-actions">
-          <button className="btn secondary" onClick={()=&gt;onDelete(task)}>Delete</button>
-          <button className="btn" onClick={()=&gt;onSave({ ...task, quest_name: name, due_date: due, due_time: dueTime || null })}>Save</button>
+          <button className="btn secondary" onClick={()=>onDelete(task)}>Delete</button>
+          <button className="btn" onClick={()=>onSave({ ...task, quest_name: name, due_date: due, due_time: dueTime || null })}>Save</button>
         </div>
       </div>
     </div>
@@ -328,66 +328,66 @@ function CustomRepeatModal({ open, baseDate, onClose, onSave }){
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e=&gt;e.stopPropagation()}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
         <div className="modal-header">
           <h3>Custom Repeat</h3>
           <button className="btn secondary" onClick={onClose}>Close</button>
         </div>
         <div className="row" style={{flexWrap:'wrap', marginBottom:8}}>
-          <select value={freq} onChange={e=&gt;setFreq(e.target.value)}>
-            {['Daily','Weekly','Weekdays','Monthly','Annual'].map(f=&gt; <option key={f}>{f}</option>)}
+          <select value={freq} onChange={e=>setFreq(e.target.value)}>
+            {['Daily','Weekly','Weekdays','Monthly','Annual'].map(f=> <option key={f}>{f}</option>)}
           </select>
-          <input className="input" type="number" min={1} value={interval} onChange={e=&gt;setInterval(Number(e.target.value||1))} />
+          <input className="input" type="number" min={1} value={interval} onChange={e=>setInterval(Number(e.target.value||1))} />
           <span className="small">Every N {freq.toLowerCase()}</span>
         </div>
-        {freq==='Weekly' &amp;&amp; (
+        {freq==='Weekly' && (
           <div className="row" style={{marginBottom:8}}>
             <span className="small">Days (Mon, Wed):</span>
             <input className="input" placeholder="Mon, Wed" id="weekly-days-input" />
             <span className="small">You can edit later in Recurring</span>
           </div>
         )}
-        {freq==='Monthly' &amp;&amp; (
+        {freq==='Monthly' && (
           <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
-            <select value={monthlyMode} onChange={e=&gt;setMonthlyMode(e.target.value)}>
+            <select value={monthlyMode} onChange={e=>setMonthlyMode(e.target.value)}>
               <option value="date">On day {monthlyOnDate}</option>
               <option value="weekday">On the nth weekday</option>
             </select>
             {monthlyMode==='date' ? (
-              <input className="input" type="number" min={1} max={31} value={monthlyOnDate} onChange={e=&gt;setMonthlyOnDate(Number(e.target.value||1))} />
+              <input className="input" type="number" min={1} max={31} value={monthlyOnDate} onChange={e=>setMonthlyOnDate(Number(e.target.value||1))} />
             ) : (
               <>
-                <select value={monthlyWeekIndex} onChange={e=&gt;setMonthlyWeekIndex(Number(e.target.value))}>
-                  {[1,2,3,4,5,-1].map(n=&gt; <option key={n} value={n}>{n===-1?'Last':`${n}th`}</option>)}
+                <select value={monthlyWeekIndex} onChange={e=>setMonthlyWeekIndex(Number(e.target.value))}>
+                  {[1,2,3,4,5,-1].map(n=> <option key={n} value={n}>{n===-1?'Last':`${n}th`}</option>)}
                 </select>
-                <select value={monthlyWeekday} onChange={e=&gt;setMonthlyWeekday(e.target.value)}>
-                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=&gt; <option key={w}>{w}</option>)}
+                <select value={monthlyWeekday} onChange={e=>setMonthlyWeekday(e.target.value)}>
+                  {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=> <option key={w}>{w}</option>)}
                 </select>
               </>
             )}
           </div>
         )}
         <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
-          <select value={ends} onChange={e=&gt;setEnds(e.target.value)}>
+          <select value={ends} onChange={e=>setEnds(e.target.value)}>
             <option value="never">Ends: Never</option>
             <option value="on_date">Ends: On date</option>
             <option value="after">Ends: After N</option>
           </select>
-          {ends==='on_date' &amp;&amp; (&lt;input className="input" type="date" value={untilDate} onChange={e=&gt;setUntilDate(e.target.value)} /&gt;)}
-          {ends==='after' &amp;&amp; (&lt;input className="input" type="number" min={1} value={count} onChange={e=&gt;setCount(Number(e.target.value||0))} /&gt;)}
+          {ends==='on_date' && (<input className="input" type="date" value={untilDate} onChange={e=>setUntilDate(e.target.value)} />)}
+          {ends==='after' && (<input className="input" type="number" min={1} value={count} onChange={e=>setCount(Number(e.target.value||0))} />)}
         </div>
         <div className="modal-actions">
-          <button className="btn" onClick={()=&gt;{
+          <button className="btn" onClick={()=>{
             onSave({
               frequency: freq,
               interval,
               monthly_mode: freq==='Monthly'? monthlyMode : undefined,
-              monthly_on_date: freq==='Monthly' &amp;&amp; monthlyMode==='date'? monthlyOnDate : undefined,
-              monthly_week_index: freq==='Monthly' &amp;&amp; monthlyMode==='weekday'? monthlyWeekIndex : undefined,
-              monthly_weekday: freq==='Monthly' &amp;&amp; monthlyMode==='weekday'? monthlyWeekday : undefined,
+              monthly_on_date: freq==='Monthly' && monthlyMode==='date'? monthlyOnDate : undefined,
+              monthly_week_index: freq==='Monthly' && monthlyMode==='weekday'? monthlyWeekIndex : undefined,
+              monthly_weekday: freq==='Monthly' && monthlyMode==='weekday'? monthlyWeekday : undefined,
               ends,
-              until_date: ends==='on_date' &amp;&amp; untilDate ? untilDate : undefined,
-              count: ends==='after' &amp;&amp; count ? count : undefined,
+              until_date: ends==='on_date' && untilDate ? untilDate : undefined,
+              count: ends==='after' && count ? count : undefined,
               days: freq==='Weekly' ? document.getElementById('weekly-days-input')?.value : undefined,
             });
             onClose();
@@ -410,10 +410,10 @@ function ActiveQuests({ hideExtras=false }){
   const [form, setForm] = useState({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
   const [repeat, setRepeat] = useState('none'); // none | daily | weekly_on | weekdays | monthly_on_date | annual | custom
 
-  const fetchAll = async () =&gt; {
+  const fetchAll = async () => {
     const q = await api.get(`/quests/active`);
     // sort by due_date then due_time (empty first)
-    const sorted = [...q.data].sort((a,b) =&gt; {
+    const sorted = [...q.data].sort((a,b) => {
       const da = new Date(a.due_date + 'T00:00:00').getTime();
       const db = new Date(b.due_date + 'T00:00:00').getTime();
       if (da !== db) return da - db;
@@ -424,9 +424,9 @@ function ActiveQuests({ hideExtras=false }){
     setList(sorted);
   };
 
-  useEffect(() =&gt; { fetchAll(); }, []);
+  useEffect(() => { fetchAll(); }, []);
 
-  const onCreate = async (e) =&gt; {
+  const onCreate = async (e) => {
     e.preventDefault();
     if(!form.quest_name || !form.due_date) return;
     await api.post(`/quests/active`, { ...form, due_time: form.due_time || null });
@@ -455,40 +455,40 @@ function ActiveQuests({ hideExtras=false }){
     await fetchAll();
   };
 
-  const markCompleted = async (id) =&gt; { await api.post(`/quests/active/${id}/complete`); await Promise.all([fetchAll(), refreshXP()]); };
-  const markIncomplete = async (id) =&gt; { await api.post(`/quests/active/${id}/mark-incomplete`); await fetchAll(); };
-  const updateRow = async (id, patch) =&gt; { await api.patch(`/quests/active/${id}`, patch); await fetchAll(); };
-  const deleteRow = async (id) =&gt; { await api.delete(`/quests/active/${id}`); await fetchAll(); };
+  const markCompleted = async (id) => { await api.post(`/quests/active/${id}/complete`); await Promise.all([fetchAll(), refreshXP()]); };
+  const markIncomplete = async (id) => { await api.post(`/quests/active/${id}/mark-incomplete`); await fetchAll(); };
+  const updateRow = async (id, patch) => { await api.patch(`/quests/active/${id}`, patch); await fetchAll(); };
+  const deleteRow = async (id) => { await api.delete(`/quests/active/${id}`); await fetchAll(); };
 
-  const dueColor = (due) =&gt; {
+  const dueColor = (due) => {
     if(!due) return "";
     const today = new Date();
     const d = new Date(due + "T00:00:00");
     const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    if (d.getTime() &lt; t.getTime()) return "red";
+    if (d.getTime() < t.getTime()) return "red";
     if (d.getTime() === t.getTime()) return "blue";
     return "green";
   };
 
   // Calendar navigation
-  const onPrev = () =&gt; {
+  const onPrev = () => {
     if(view==='week') setAnchorDate(addDays(anchorDate, -7));
     else if(view==='month') setAnchorDate(new Date(anchorDate.getFullYear(), anchorDate.getMonth()-1, 1));
     else setAnchorDate(addDays(anchorDate, -1));
   };
-  const onNext = () =&gt; {
+  const onNext = () => {
     if(view==='week') setAnchorDate(addDays(anchorDate, 7));
     else if(view==='month') setAnchorDate(new Date(anchorDate.getFullYear(), anchorDate.getMonth()+1, 1));
     else setAnchorDate(addDays(anchorDate, 1));
   };
-  const onToday = () =&gt; setAnchorDate(new Date());
+  const onToday = () => setAnchorDate(new Date());
 
   // Modal state
   const [editing, setEditing] = useState(null);
-  const openTask = (task) =&gt; setEditing(task);
-  const closeTask = () =&gt; setEditing(null);
-  const saveTask = async (task) =&gt; { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null }); closeTask(); };
-  const deleteTask = async (task) =&gt; { await deleteRow(task.id); closeTask(); };
+  const openTask = (task) => setEditing(task);
+  const closeTask = () => setEditing(null);
+  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null }); closeTask(); };
+  const deleteTask = async (task) => { await deleteRow(task.id); closeTask(); };
 
   const [openCustom, setOpenCustom] = useState(false);
 
@@ -498,17 +498,17 @@ function ActiveQuests({ hideExtras=false }){
       <div className="sidebar">
         <XPBadge summary={summary} />
         <div style={{height:12}} />
-        <MiniMonth selectedDate={anchorDate} onSelect={(d)=&gt;{ setAnchorDate(d); setView('day'); }} />
+        <MiniMonth selectedDate={anchorDate} onSelect={(d)=>{ setAnchorDate(d); setView('day'); }} />
 
         {/* Quick add */}
         <div className="card" style={{marginTop:16}}>
           <div className="kicker" style={{marginBottom:8}}>Quick Add</div>
           <div className="row" style={{flexWrap:'wrap'}}>
-            <input className="input" placeholder="Quest Name" value={form.quest_name} onChange={e=&gt;setForm({...form, quest_name: e.target.value})} />
-            <select value={form.quest_rank} onChange={e=&gt;setForm({...form, quest_rank: e.target.value})}>{ranks.map(r=&gt; &lt;option key={r} value={r}>{r}&lt;/option&gt;)}</select>
-            <input type="date" className="input" value={form.due_date} onChange={e=&gt;setForm({...form, due_date: e.target.value})} />
-            <input type="time" className="input" value={form.due_time} onChange={e=&gt;setForm({...form, due_time: e.target.value})} />
-            <select value={repeat} onChange={e=&gt;{
+            <input className="input" placeholder="Quest Name" value={form.quest_name} onChange={e=>setForm({...form, quest_name: e.target.value})} />
+            <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>{ranks.map(r=> <option key={r} value={r}>{r}</option>)}</select>
+            <input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} />
+            <input type="time" className="input" value={form.due_time} onChange={e=>setForm({...form, due_time: e.target.value})} />
+            <select value={repeat} onChange={e=>{
               const val = e.target.value; setRepeat(val); if(val==='custom') setOpenCustom(true);
             }}>
               <option value="none">Does not repeat</option>
@@ -527,20 +527,20 @@ function ActiveQuests({ hideExtras=false }){
         <div className="card" style={{marginTop:16}}>
           <div className="kicker" style={{marginBottom:8}}>Today</div>
           <div style={{display:'flex', flexDirection:'column', gap:6}}>
-            {list.filter(t=&gt;t.due_date===ymd(anchorDate)).slice(0,6).map(t=&gt; (
-              <button key={t.id} className="task-chip" style={{textAlign:'left'}} onClick={()=&gt;openTask(t)}>{t.quest_name}</button>
+            {list.filter(t=>t.due_date===ymd(anchorDate)).slice(0,6).map(t=> (
+              <button key={t.id} className="task-chip" style={{textAlign:'left'}} onClick={()=>openTask(t)}>{t.quest_name}</button>
             ))}
-            {list.filter(t=&gt;t.due_date===ymd(anchorDate)).length===0 &amp;&amp; <span className="small">No tasks</span>}
+            {list.filter(t=>t.due_date===ymd(anchorDate)).length===0 && <span className="small">No tasks</span>}
           </div>
         </div>
 
         {/* Custom repeat modal */}
-        <CustomRepeatModal open={openCustom} baseDate={new Date(form.due_date || new Date())} onClose={()=&gt;setOpenCustom(false)} onSave={(cfg)=&gt;{
+        <CustomRepeatModal open={openCustom} baseDate={new Date(form.due_date || new Date())} onClose={()=>setOpenCustom(false)} onSave={(cfg)=>{
           // translate to backend payload and create recurring rule immediately
           try{
             const body = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: cfg.frequency, status: form.status };
             if (cfg.interval) body.interval = cfg.interval;
-            if (cfg.frequency==='Weekly' &amp;&amp; cfg.days) body.days = cfg.days;
+            if (cfg.frequency==='Weekly' && cfg.days) body.days = cfg.days;
             if (cfg.frequency==='Monthly'){
               if (cfg.monthly_mode==='weekday'){
                 body.monthly_mode = 'weekday';
@@ -580,51 +580,51 @@ function ActiveQuests({ hideExtras=false }){
 
         {/* Under-calendar table like agenda */}
         <div className="card list-scroll" style={{marginTop:16}}>
-          &lt;table className="table"&gt;
-            &lt;thead&gt;
-              &lt;tr&gt;
-                &lt;th&gt;Quest Name&lt;/th&gt;
-                &lt;th&gt;Quest Rank&lt;/th&gt;
-                &lt;th&gt;Due Date&lt;/th&gt;
-                &lt;th&gt;Status&lt;/th&gt;
-                &lt;th&gt;Actions&lt;/th&gt;
-              &lt;/tr&gt;
-            &lt;/thead&gt;
-            &lt;tbody&gt;
-              {list.map(row =&gt; (
-                &lt;tr key={row.id}&gt;
-                  &lt;td&gt;
-                    &lt;button className="btn secondary" onClick={()=&gt;openTask(row)} style={{border:'none', background:'transparent', color:'#111', padding:0}}&gt;
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Quest Name</th>
+                <th>Quest Rank</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map(row => (
+                <tr key={row.id}>
+                  <td>
+                    <button className="btn secondary" onClick={()=>openTask(row)} style={{border:'none', background:'transparent', color:'#111', padding:0}}>
                       {row.quest_name}
-                    &lt;/button&gt;
-                  &lt;/td&gt;
-                  &lt;td&gt;
-                    &lt;select value={row.quest_rank} onChange={e=&gt;updateRow(row.id,{quest_rank: e.target.value})}&gt;
-                      {ranks.map(r =&gt; &lt;option key={r} value={r}&gt;{r}&lt;/option&gt;)}
-                    &lt;/select&gt;
-                  &lt;/td&gt;
-                  &lt;td&gt;
-                    &lt;span className={`dot ${dueColor(row.due_date)}`} style={{marginRight:6}}&gt;&lt;/span&gt;
-                    &lt;input type="date" value={row.due_date} onChange={e=&gt;updateRow(row.id,{due_date: e.target.value})} /&gt;
-                    {row.due_time ? &lt;span className="small" style={{marginLeft:8}}&gt;{row.due_time}&lt;/span&gt; : null}
-                  &lt;/td&gt;
-                  &lt;td&gt;
-                    &lt;select value={row.status} onChange={async e=&gt;{
+                    </button>
+                  </td>
+                  <td>
+                    <select value={row.quest_rank} onChange={e=>updateRow(row.id,{quest_rank: e.target.value})}>
+                      {ranks.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <span className={`dot ${dueColor(row.due_date)}`} style={{marginRight:6}}></span>
+                    <input type="date" value={row.due_date} onChange={e=>updateRow(row.id,{due_date: e.target.value})} />
+                    {row.due_time ? <span className="small" style={{marginLeft:8}}>{row.due_time}</span> : null}
+                  </td>
+                  <td>
+                    <select value={row.status} onChange={async e=>{
                       const val = e.target.value;
                       if (val === 'Completed') return await markCompleted(row.id);
                       if (val === 'Incomplete') return await markIncomplete(row.id);
                       await updateRow(row.id,{status: val});
-                    }}&gt;
-                      {statuses.map(s =&gt; &lt;option key={s} value={s}&gt;{s}&lt;/option&gt;)}
-                    &lt;/select&gt;
-                  &lt;/td&gt;
-                  &lt;td&gt;
-                    &lt;button className="btn secondary" onClick={()=&gt;markCompleted(row.id)}&gt;Complete&lt;/button&gt;
-                  &lt;/td&gt;
-                &lt;/tr&gt;
+                    }}>
+                      {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <button className="btn secondary" onClick={()=>markCompleted(row.id)}>Complete</button>
+                  </td>
+                </tr>
               ))}
-            &lt;/tbody&gt;
-          &lt;/table&gt;
+            </tbody>
+          </table>
         </div>
 
         {/* Modal for editing */}
@@ -639,13 +639,13 @@ function Completed(){
   const [list, setList] = useState([]);
   const { summary } = useXPSummary();
 
-  const load = async () =&gt; {
+  const load = async () => {
     const { data } = await api.get(`/quests/completed`);
     setList(data);
   };
-  useEffect(() =&gt; { load(); }, []);
+  useEffect(() => { load(); }, []);
 
-  const fmt = (iso) =&gt; new Date(iso).toLocaleString();
+  const fmt = (iso) => new Date(iso).toLocaleString();
 
   return (
     <div className="container">
@@ -654,26 +654,26 @@ function Completed(){
         <div className="badge small">Total earned: {summary.total_earned}</div>
       </div>
       <div className="card" style={{marginTop:16}}>
-        &lt;table className="table"&gt;
-          &lt;thead&gt;
-            &lt;tr&gt;
-              &lt;th&gt;Quest Name&lt;/th&gt;
-              &lt;th&gt;Quest Rank&lt;/th&gt;
-              &lt;th&gt;XP Earned&lt;/th&gt;
-              &lt;th&gt;Date Completed&lt;/th&gt;
-            &lt;/tr&gt;
-          &lt;/thead&gt;
-          &lt;tbody&gt;
-            {list.map(r =&gt; (
-              &lt;tr key={r.id}&gt;
-                &lt;td&gt;{r.quest_name}&lt;/td&gt;
-                &lt;td&gt;{r.quest_rank}&lt;/td&gt;
-                &lt;td&gt;{r.xp_earned}&lt;/td&gt;
-                &lt;td&gt;{fmt(r.date_completed)}&lt;/td&gt;
-              &lt;/tr&gt;
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Quest Name</th>
+              <th>Quest Rank</th>
+              <th>XP Earned</th>
+              <th>Date Completed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map(r => (
+              <tr key={r.id}>
+                <td>{r.quest_name}</td>
+                <td>{r.quest_rank}</td>
+                <td>{r.xp_earned}</td>
+                <td>{fmt(r.date_completed)}</td>
+              </tr>
             ))}
-          &lt;/tbody&gt;
-        &lt;/table&gt;
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -687,7 +687,7 @@ function Rewards(){
   const [inventory, setInventory] = useState([]);
   const [form, setForm] = useState({ reward_name: "", xp_cost: 25 });
 
-  const load = async () =&gt; {
+  const load = async () => {
     const [s, l, inv] = await Promise.all([
       api.get(`/rewards/store`),
       api.get(`/rewards/log`),
@@ -697,8 +697,8 @@ function Rewards(){
   };
   useEffect(()=>{ load(); },[]);
 
-  // ---- Minimal B&amp;W confetti animation ----
-  const fireRewardAnimation = (evt, variant='redeem') =&gt; {
+  // ---- Minimal B&W confetti animation ----
+  const fireRewardAnimation = (evt, variant='redeem') => {
     const x = evt?.clientX ?? window.innerWidth/2;
     const y = evt?.clientY ?? window.innerHeight/2;
     const container = document.createElement('div');
@@ -706,8 +706,8 @@ function Rewards(){
     document.body.appendChild(container);
     const pieces = 24;
     let removed = 0;
-    const cleanup = () =&gt; { removed++; if (removed &gt;= pieces) container.remove(); };
-    for (let i=0;i&lt;pieces;i++){
+    const cleanup = () => { removed++; if (removed >= pieces) container.remove(); };
+    for (let i=0;i<pieces;i++){
       const el = document.createElement('span');
       el.className = 'reward-confetti';
       const dx = (Math.random()*2-1) * 160; // -160..160
@@ -718,7 +718,7 @@ function Rewards(){
       el.style.top = y + 'px';
       el.style.width = size + 'px';
       el.style.height = size + 'px';
-      el.style.borderRadius = Math.random() &gt; .5 ? '50%' : '2px';
+      el.style.borderRadius = Math.random() > .5 ? '50%' : '2px';
       el.style.setProperty('--dx', dx + 'px');
       el.style.setProperty('--dy', dy + 'px');
       el.style.setProperty('--rot', rot);
@@ -727,19 +727,19 @@ function Rewards(){
       container.appendChild(el);
     }
     // safety cleanup
-    setTimeout(() =&gt; { try{container.remove();}catch{} }, 1200);
+    setTimeout(() => { try{container.remove();}catch{} }, 1200);
   };
 
-  const addOrUpdate = async (e) =&gt; {
+  const addOrUpdate = async (e) => {
     e.preventDefault();
     if(!form.reward_name || !form.xp_cost) return;
     await api.post(`/rewards/store`, form);
     setForm({ reward_name: "", xp_cost: 25 });
     await load();
   };
-  const del = async (id) =&gt; { await api.delete(`/rewards/store/${id}`); await load(); };
+  const del = async (id) => { await api.delete(`/rewards/store/${id}`); await load(); };
 
-  const redeem = async (id, evt) =&gt; {
+  const redeem = async (id, evt) => {
     try{
       await api.post(`/rewards/redeem`, { reward_id: id });
       fireRewardAnimation(evt, 'redeem');
@@ -748,7 +748,7 @@ function Rewards(){
       alert(err?.response?.data?.detail || 'Unable to redeem');
     }
   };
-  const useReward = async (id, evt) =&gt; {
+  const useReward = async (id, evt) => {
     try{
       await api.post(`/rewards/use/${id}`);
       fireRewardAnimation(evt, 'use');
@@ -758,7 +758,7 @@ function Rewards(){
     }
   };
 
-  const fmt = (iso) =&gt; new Date(iso).toLocaleString();
+  const fmt = (iso) => new Date(iso).toLocaleString();
 
   return (
     <div className="container">
@@ -769,73 +769,73 @@ function Rewards(){
 
       <form onSubmit={addOrUpdate} className="card" style={{marginTop:16}}>
         <div className="row">
-          <input className="input" placeholder="Reward name" value={form.reward_name} onChange={e=&gt;setForm({...form, reward_name:e.target.value})} />
-          &lt;input className="input" type="number" placeholder="XP cost" value={form.xp_cost} onChange={e=&gt;setForm({...form, xp_cost: Number(e.target.value)})} /&gt;
+          <input className="input" placeholder="Reward name" value={form.reward_name} onChange={e=>setForm({...form, reward_name:e.target.value})} />
+          <input className="input" type="number" placeholder="XP cost" value={form.xp_cost} onChange={e=>setForm({...form, xp_cost: Number(e.target.value)})} />
           <button className="btn" type="submit">Save</button>
         </div>
       </form>
 
       <div className="card" style={{marginTop:16}}>
         <h3 className="kicker">Reward Store</h3>
-        &lt;table className="table"&gt;
-          &lt;thead&gt;
-            &lt;tr&gt;&lt;th&gt;Reward&lt;/th&gt;&lt;th&gt;XP Cost&lt;/th&gt;&lt;th&gt;Actions&lt;/th&gt;&lt;/tr&gt;
-          &lt;/thead&gt;
-          &lt;tbody&gt;
-            {store.map(s =&gt; (
-              &lt;tr key={s.id}&gt;
-                &lt;td&gt;{s.reward_name}&lt;/td&gt;
-                &lt;td&gt;{s.xp_cost}&lt;/td&gt;
-                &lt;td style={{display:'flex', gap:8}}&gt;
-                  &lt;button className="btn" onClick={(e)=&gt;redeem(s.id, e)}&gt;Redeem&lt;/button&gt;
-                  &lt;button className="btn secondary" onClick={()=&gt;del(s.id)}&gt;Delete&lt;/button&gt;
-                &lt;/td&gt;
-              &lt;/tr&gt;
+        <table className="table">
+          <thead>
+            <tr><th>Reward</th><th>XP Cost</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {store.map(s => (
+              <tr key={s.id}>
+                <td>{s.reward_name}</td>
+                <td>{s.xp_cost}</td>
+                <td style={{display:'flex', gap:8}}>
+                  <button className="btn" onClick={(e)=>redeem(s.id, e)}>Redeem</button>
+                  <button className="btn secondary" onClick={()=>del(s.id)}>Delete</button>
+                </td>
+              </tr>
             ))}
-          &lt;/tbody&gt;
-        &lt;/table&gt;
+          </tbody>
+        </table>
       </div>
 
       <div className="card" style={{marginTop:16}}>
         <h3 className="kicker">My Redeemed Rewards</h3>
-        &lt;table className="table"&gt;
-          &lt;thead&gt;
-            &lt;tr&gt;&lt;th&gt;Date Redeemed&lt;/th&gt;&lt;th&gt;Reward&lt;/th&gt;&lt;th&gt;XP Cost&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Actions&lt;/th&gt;&lt;/tr&gt;
-          &lt;/thead&gt;
-          &lt;tbody&gt;
-            {inventory.filter(i=&gt;!i.used).map(item =&gt; (
-              &lt;tr key={item.id}&gt;
-                &lt;td&gt;{fmt(item.date_redeemed)}&lt;/td&gt;
-                &lt;td&gt;{item.reward_name}&lt;/td&gt;
-                &lt;td&gt;{item.xp_cost}&lt;/td&gt;
-                &lt;td&gt;{item.used ? 'Used' : 'Available'}&lt;/td&gt;
-                &lt;td&gt;
+        <table className="table">
+          <thead>
+            <tr><th>Date Redeemed</th><th>Reward</th><th>XP Cost</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {inventory.filter(i=>!i.used).map(item => (
+              <tr key={item.id}>
+                <td>{fmt(item.date_redeemed)}</td>
+                <td>{item.reward_name}</td>
+                <td>{item.xp_cost}</td>
+                <td>{item.used ? 'Used' : 'Available'}</td>
+                <td>
                   {!item.used ? (
-                    &lt;button className="btn" onClick={(e)=&gt;useReward(item.id, e)}&gt;Use&lt;/button&gt;
+                    <button className="btn" onClick={(e)=>useReward(item.id, e)}>Use</button>
                   ) : null}
-                &lt;/td&gt;
-              &lt;/tr&gt;
+                </td>
+              </tr>
             ))}
-          &lt;/tbody&gt;
-        &lt;/table&gt;
+          </tbody>
+        </table>
       </div>
 
       <div className="card" style={{marginTop:16}}>
         <h3 className="kicker">Reward Log</h3>
-        &lt;table className="table"&gt;
-          &lt;thead&gt;
-            &lt;tr&gt;&lt;th&gt;Date Redeemed&lt;/th&gt;&lt;th&gt;Reward&lt;/th&gt;&lt;th&gt;XP Cost&lt;/th&gt;&lt;/tr&gt;
-          &lt;/thead&gt;
-          &lt;tbody&gt;
-            {log.map(l =&gt; (
-              &lt;tr key={l.id}&gt;
-                &lt;td&gt;{fmt(l.date_redeemed)}&lt;/td&gt;
-                &lt;td&gt;{l.reward_name}&lt;/td&gt;
-                &lt;td&gt;{l.xp_cost}&lt;/td&gt;
-              &lt;/tr&gt;
+        <table className="table">
+          <thead>
+            <tr><th>Date Redeemed</th><th>Reward</th><th>XP Cost</th></tr>
+          </thead>
+          <tbody>
+            {log.map(l => (
+              <tr key={l.id}>
+                <td>{fmt(l.date_redeemed)}</td>
+                <td>{l.reward_name}</td>
+                <td>{l.xp_cost}</td>
+              </tr>
             ))}
-          &lt;/tbody&gt;
-        &lt;/table&gt;
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -846,12 +846,12 @@ function Recurring(){
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState({ task_name: "", quest_rank: "Common", frequency: "Daily", days: "", status: "Pending" });
 
-  const load = async () =&gt; { const { data } = await api.get(`/recurring`); setRows(data); };
+  const load = async () => { const { data } = await api.get(`/recurring`); setRows(data); };
   useEffect(()=>{ load(); },[]);
 
-  const upsert = async (e) =&gt; { e.preventDefault(); await api.post(`/recurring`, form); setForm({ task_name: "", quest_rank: "Common", frequency: "Daily", days: "", status: "Pending" }); await load(); };
-  const del = async (id) =&gt; { await api.delete(`/recurring/${id}`); await load(); };
-  const run = async () =&gt; { await api.post(`/recurring/run`); };
+  const upsert = async (e) => { e.preventDefault(); await api.post(`/recurring`, form); setForm({ task_name: "", quest_rank: "Common", frequency: "Daily", days: "", status: "Pending" }); await load(); };
+  const del = async (id) => { await api.delete(`/recurring/${id}`); await load(); };
+  const run = async () => { await api.post(`/recurring/run`); };
 
   return (
     <div className="container">
@@ -862,36 +862,36 @@ function Recurring(){
 
       <form onSubmit={upsert} className="card" style={{marginTop:16}}>
         <div className="row">
-          <input className="input" placeholder="Task name" value={form.task_name} onChange={e=&gt;setForm({...form, task_name:e.target.value})} />
-          <select value={form.quest_rank} onChange={e=&gt;setForm({...form, quest_rank:e.target.value})}>{ranks.map(r=&gt;&lt;option key={r}&gt;{r}&lt;/option&gt;)}</select>
-          <select value={form.frequency} onChange={e=&gt;setForm({...form, frequency:e.target.value})}>
-            {['Daily','Weekly','Weekdays','Monthly'].map(f=&gt; &lt;option key={f}&gt;{f}&lt;/option&gt;)}
+          <input className="input" placeholder="Task name" value={form.task_name} onChange={e=>setForm({...form, task_name:e.target.value})} />
+          <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank:e.target.value})}>{ranks.map(r=><option key={r}>{r}</option>)}</select>
+          <select value={form.frequency} onChange={e=>setForm({...form, frequency:e.target.value})}>
+            {['Daily','Weekly','Weekdays','Monthly'].map(f=> <option key={f}>{f}</option>)}
           </select>
-          <input className="input" placeholder="Days (Mon, Fri) for Weekly" value={form.days} onChange={e=&gt;setForm({...form, days: e.target.value})} />
-          <select value={form.status} onChange={e=&gt;setForm({...form, status:e.target.value})}>{['Pending','In Progress','Completed','Incomplete'].map(s=&gt; &lt;option key={s}&gt;{s}&lt;/option&gt;)}</select>
+          <input className="input" placeholder="Days (Mon, Fri) for Weekly" value={form.days} onChange={e=>setForm({...form, days: e.target.value})} />
+          <select value={form.status} onChange={e=>setForm({...form, status:e.target.value})}>{['Pending','In Progress','Completed','Incomplete'].map(s=> <option key={s}>{s}</option>)}</select>
           <button className="btn" type="submit">Add</button>
         </div>
       </form>
 
       <div className="card" style={{marginTop:16}}>
-        &lt;table className="table"&gt;
-          &lt;thead&gt;
-            &lt;tr&gt;&lt;th&gt;Task Name&lt;/th&gt;&lt;th&gt;Quest Rank&lt;/th&gt;&lt;th&gt;Frequency&lt;/th&gt;&lt;th&gt;Days&lt;/th&gt;&lt;th&gt;Status&lt;/th&gt;&lt;th&gt;Last Added&lt;/th&gt;&lt;th&gt;Actions&lt;/th&gt;&lt;/tr&gt;
-          &lt;/thead&gt;
-          &lt;tbody&gt;
-            {rows.map(r =&gt; (
-              &lt;tr key={r.id}&gt;
-                &lt;td&gt;{r.task_name}&lt;/td&gt;
-                &lt;td&gt;{r.quest_rank}&lt;/td&gt;
-                &lt;td&gt;{r.frequency}&lt;/td&gt;
-                &lt;td&gt;{r.days || '-'}&lt;/td&gt;
-                &lt;td&gt;{r.status}&lt;/td&gt;
-                &lt;td&gt;{r.last_added || '-'}&lt;/td&gt;
-                &lt;td&gt;&lt;button className="btn secondary" onClick={()=&gt;del(r.id)}&gt;Delete&lt;/button&gt;&lt;/td&gt;
-              &lt;/tr&gt;
+        <table className="table">
+          <thead>
+            <tr><th>Task Name</th><th>Quest Rank</th><th>Frequency</th><th>Days</th><th>Status</th><th>Last Added</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id}>
+                <td>{r.task_name}</td>
+                <td>{r.quest_rank}</td>
+                <td>{r.frequency}</td>
+                <td>{r.days || '-'}</td>
+                <td>{r.status}</td>
+                <td>{r.last_added || '-'}</td>
+                <td><button className="btn secondary" onClick={()=>del(r.id)}>Delete</button></td>
+              </tr>
             ))}
-          &lt;/tbody&gt;
-        &lt;/table&gt;
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -901,10 +901,10 @@ function Rules(){
   const api = useApi();
   const [rules, setRules] = useState("");
 
-  const load = async () =&gt; { const { data } = await api.get(`/rules`); setRules(data?.content || ""); };
+  const load = async () => { const { data } = await api.get(`/rules`); setRules(data?.content || ""); };
   useEffect(()=>{ load(); },[]);
 
-  const save = async () =&gt; { await api.put(`/rules`, { content: rules }); };
+  const save = async () => { await api.put(`/rules`, { content: rules }); };
 
   return (
     <div className="container">
@@ -913,7 +913,7 @@ function Rules(){
         <button className="btn" onClick={save}>Save</button>
       </div>
       <div className="card" style={{marginTop:16}}>
-        &lt;textarea rows={10} style={{width:'100%'}} value={rules} onChange={e=&gt;setRules(e.target.value)} /&gt;
+        <textarea rows={10} style={{width:'100%'}} value={rules} onChange={e=>setRules(e.target.value)} />
       </div>
     </div>
   );
