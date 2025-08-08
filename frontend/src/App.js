@@ -405,39 +405,84 @@ function ActiveQuests({ hideExtras=false }){
   const deleteTask = async (task) => { await deleteRow(task.id); closeTask(); };
 
   return (
-    <div className="container">
-      <div className="row" style={{justifyContent: 'space-between'}}>
-        <h2>Active Quests</h2>
+    <div className="app-shell">
+      {/* Sidebar with all features (non-collapsible) */}
+      <div className="sidebar">
         <XPBadge summary={summary} />
-      </div>
+        <div style={{height:12}} />
+        <MiniMonth selectedDate={anchorDate} onSelect={(d)=>{ setAnchorDate(d); setView('day'); }} />
 
-      {/* Quick add */}
-      <form onSubmit={onCreate} className="card" style={{marginTop: 16}}>
-        <div className="row" style={{flexWrap:'wrap'}}>
-          <div className="col"><input className="input" placeholder="Quest Name" value={form.quest_name} onChange={e=>setForm({...form, quest_name: e.target.value})} /></div>
-          <div>
-            <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>
-              {ranks.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-          <div><input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} /></div>
-          <div><input type="time" className="input" value={form.due_time} onChange={e=>setForm({...form, due_time: e.target.value})} /></div>
-          <div>
+        {/* Quick add */}
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Quick Add</div>
+          <div className="row" style={{flexWrap:'wrap'}}>
+            <input className="input" placeholder="Quest Name" value={form.quest_name} onChange={e=>setForm({...form, quest_name: e.target.value})} />
+            <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank: e.target.value})}>{ranks.map(r=> <option key={r} value={r}>{r}</option>)}</select>
+            <input type="date" className="input" value={form.due_date} onChange={e=>setForm({...form, due_date: e.target.value})} />
+            <input type="time" className="input" value={form.due_time} onChange={e=>setForm({...form, due_time: e.target.value})} />
             <select value={repeat} onChange={e=>setRepeat(e.target.value)}>
               <option value="none">Does not repeat</option>
               <option value="daily">Daily</option>
-              <option value="weekly_on">Weekly on selected date's weekday</option>
-              <option value="weekdays">Every weekday (Mon-Fri)</option>
+              <option value="weekly_on">Weekly on weekday</option>
+              <option value="weekdays">Every weekday</option>
               <option value="monthly_on_date">Monthly on date</option>
-              <option value="annual">Annually on date</option>
+              <option value="annual">Annually</option>
             </select>
+            <button className="btn" onClick={onCreate}>Add</button>
           </div>
-          <div><button className="btn" type="submit">Add</button></div>
         </div>
-      </form>
 
-      {/* Calendar */}
-      <div style={{marginTop: 16}}>
+        {/* Mini lists */}
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Today</div>
+          <div style={{display:'flex', flexDirection:'column', gap:6}}>
+            {list.filter(t=>t.due_date===ymd(anchorDate)).slice(0,6).map(t=> (
+              <button key={t.id} className="task-chip" style={{textAlign:'left'}} onClick={()=>openTask(t)}>{t.quest_name}</button>
+            ))}
+            {list.filter(t=>t.due_date===ymd(anchorDate)).length===0 && <span className="small">No tasks</span>}
+          </div>
+        </div>
+
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Quick Actions</div>
+          <div className="row" style={{flexWrap:'wrap'}}>
+            <button className="btn secondary" onClick={()=>setView('day')}>Day</button>
+            <button className="btn secondary" onClick={()=>setView('week')}>Week</button>
+            <button className="btn secondary" onClick={()=>setView('month')}>Month</button>
+            <button className="btn secondary" onClick={()=>setAnchorDate(new Date())}>Today</button>
+          </div>
+        </div>
+
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Rewards</div>
+          <div>
+            {/* Simple link buttons to focus main content routes if ever needed */}
+            <NavLink to="/rewards" className="nav-item" style={{display:'inline-block'}}>Open Rewards</NavLink>
+          </div>
+        </div>
+
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Recurring</div>
+          <div>
+            <NavLink to="/recurring" className="nav-item" style={{display:'inline-block'}}>Manage Recurring</NavLink>
+          </div>
+        </div>
+
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Completed & Rules</div>
+          <div className="row" style={{flexWrap:'wrap'}}>
+            <NavLink to="/completed" className="nav-item">Completed</NavLink>
+            <NavLink to="/rules" className="nav-item">Rules</NavLink>
+          </div>
+        </div>
+      </div>
+
+      {/* Main calendar pane */}
+      <div className="main-pane">
+        <div className="row" style={{justifyContent: 'space-between', marginBottom:12}}>
+          <h2>Calendar</h2>
+          <XPBadge summary={summary} />
+        </div>
         <Calendar
           tasks={list}
           view={view}
@@ -448,59 +493,59 @@ function ActiveQuests({ hideExtras=false }){
           onViewChange={setView}
           onOpenTask={openTask}
         />
-      </div>
 
-      {/* Scrollable list under calendar */}
-      <div className="card list-scroll" style={{marginTop:16}}>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Quest Name</th>
-              <th>Quest Rank</th>
-              <th>Due Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map(row => (
-              <tr key={row.id}>
-                <td>
-                  <button className="btn secondary" onClick={()=>openTask(row)} style={{border:'none', background:'transparent', color:'#111', padding:0}}>
-                    {row.quest_name}
-                  </button>
-                </td>
-                <td>
-                  <select value={row.quest_rank} onChange={e=>updateRow(row.id,{quest_rank: e.target.value})}>
-                    {ranks.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </td>
-                <td>
-                  <span className={`dot ${dueColor(row.due_date)}`} style={{marginRight:6}}></span>
-                  <input type="date" value={row.due_date} onChange={e=>updateRow(row.id,{due_date: e.target.value})} />
-                  {row.due_time ? <span className="small" style={{marginLeft:8}}>{row.due_time}</span> : null}
-                </td>
-                <td>
-                  <select value={row.status} onChange={async e=>{
-                    const val = e.target.value;
-                    if (val === 'Completed') return await markCompleted(row.id);
-                    if (val === 'Incomplete') return await markIncomplete(row.id);
-                    await updateRow(row.id,{status: val});
-                  }}>
-                    {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </td>
-                <td>
-                  <button className="btn secondary" onClick={()=>markCompleted(row.id)}>Complete</button>
-                </td>
+        {/* Under-calendar table like agenda */}
+        <div className="card list-scroll" style={{marginTop:16}}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Quest Name</th>
+                <th>Quest Rank</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {list.map(row => (
+                <tr key={row.id}>
+                  <td>
+                    <button className="btn secondary" onClick={()=>openTask(row)} style={{border:'none', background:'transparent', color:'#111', padding:0}}>
+                      {row.quest_name}
+                    </button>
+                  </td>
+                  <td>
+                    <select value={row.quest_rank} onChange={e=>updateRow(row.id,{quest_rank: e.target.value})}>
+                      {ranks.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <span className={`dot ${dueColor(row.due_date)}`} style={{marginRight:6}}></span>
+                    <input type="date" value={row.due_date} onChange={e=>updateRow(row.id,{due_date: e.target.value})} />
+                    {row.due_time ? <span className="small" style={{marginLeft:8}}>{row.due_time}</span> : null}
+                  </td>
+                  <td>
+                    <select value={row.status} onChange={async e=>{
+                      const val = e.target.value;
+                      if (val === 'Completed') return await markCompleted(row.id);
+                      if (val === 'Incomplete') return await markIncomplete(row.id);
+                      await updateRow(row.id,{status: val});
+                    }}>
+                      {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <button className="btn secondary" onClick={()=>markCompleted(row.id)}>Complete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Modal for editing */}
-      <TaskEditModal open={!!editing} task={editing} onClose={closeTask} onSave={saveTask} onDelete={deleteTask} />
+        {/* Modal for editing */}
+        <TaskEditModal open={!!editing} task={editing} onClose={closeTask} onSave={saveTask} onDelete={deleteTask} />
+      </div>
     </div>
   );
 }
