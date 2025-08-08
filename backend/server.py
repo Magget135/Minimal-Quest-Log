@@ -167,6 +167,8 @@ async def update_active_quest(quest_id: str, input: ActiveQuestUpdate):
         raise HTTPException(status_code=400, detail="Invalid quest_rank")
     if "status" in update and update["status"] not in STATUS_OPTIONS:
         raise HTTPException(status_code=400, detail="Invalid status")
+    # Serialize dates for MongoDB
+    update = serialize_dates_for_mongo(update)
     await db.ActiveQuests.update_one({"id": quest_id}, {"$set": update})
     updated = await db.ActiveQuests.find_one({"id": quest_id}, {"_id": 0})
     return ActiveQuest(**updated)
