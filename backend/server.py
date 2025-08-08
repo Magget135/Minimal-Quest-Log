@@ -164,7 +164,16 @@ async def update_active_quest(quest_id: str, input: ActiveQuestUpdate):
     doc = await db.ActiveQuests.find_one({"id": quest_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Quest not found")
-    update = {k: v for k, v in input.dict(exclude_unset=True).items() if v is not None}
+    # Handle None values explicitly for optional fields like due_time
+    input_dict = input.dict(exclude_unset=True)
+    update = {}
+    for k, v in input_dict.items():
+        if k == "due_time":
+            # Allow None for due_time to remove it
+            update[k] = v
+        elif v is not None:
+            # For other fields, exclude None values
+            update[k] = v
     if "quest_rank" in update and update["quest_rank"] not in RANK_XP:
         raise HTTPException(status_code=400, detail="Invalid quest_rank")
     if "status" in update and update["status"] not in STATUS_OPTIONS:
