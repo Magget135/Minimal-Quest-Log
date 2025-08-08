@@ -464,6 +464,30 @@ function ActiveQuests({ hideExtras=false }){
     if(!due) return "";
     const today = new Date();
     const d = new Date(due + "T00:00:00");
+      <CustomRepeatModal open={openCustom} baseDate={new Date(form.due_date || new Date())} onClose={()=>setOpenCustom(false)} onSave={(cfg)=>{
+        // translate to backend payload and create recurring rule immediately
+        try{
+          const body = { task_name: form.quest_name, quest_rank: form.quest_rank, frequency: cfg.frequency, status: form.status };
+          if (cfg.interval) body.interval = cfg.interval;
+          if (cfg.frequency==='Weekly' && cfg.days) body.days = cfg.days;
+          if (cfg.frequency==='Monthly'){
+            if (cfg.monthly_mode==='weekday'){
+              body.monthly_mode = 'weekday';
+              body.monthly_week_index = cfg.monthly_week_index;
+              body.monthly_weekday = cfg.monthly_weekday;
+            } else {
+              body.monthly_on_date = cfg.monthly_on_date;
+            }
+          }
+          if (cfg.ends) body.ends = cfg.ends;
+          if (cfg.until_date) body.until_date = cfg.until_date;
+          if (cfg.count) body.count = cfg.count;
+          // store a signal in repeat state so onCreate doesn't duplicate recurring
+          setRepeat('none');
+          useApi().post(`/recurring`, body);
+        }catch(e){}
+      }} />
+
     const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     if (d.getTime() < t.getTime()) return "red";
     if (d.getTime() === t.getTime()) return "blue";
