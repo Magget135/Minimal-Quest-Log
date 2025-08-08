@@ -63,12 +63,9 @@ backend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "Backend tests passed for all endpoints including health, rewards seeding, active quest CRUD, completion flow, XP summary, redeem validation/logging, recurring generation, rules."
-      - working: true
-        agent: "testing"
-        comment: "Backend due_time regression passed previously; no changes in this iteration."
+        comment: "Backend tests passed."
 frontend:
-  - task: "Implement React UI (black/white) for Active, Completed, Rewards, Recurring, Rules"
+  - task: "Calendar minimal UI adjustments (headers, month/year left, tasks containment)"
     implemented: true
     working: NA
     file: "/app/frontend/src/App.js"
@@ -78,21 +75,21 @@ frontend:
     status_history:
       - working: NA
         agent: "main"
-        comment: "Fixed calendar: added weekday headers (Mon-Sun) above Week/Month grids, and added Day/Week day headers aligned with time columns; ensured task blocks are contained within their day columns." 
+        comment: "Made headers minimal: MON/TUE/WED with date number beneath; moved Month Year to left; ensured blocks fit within columns; reduced borders for minimal feel." 
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 4
+  test_sequence: 5
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Verify day/week headers render and align with columns"
-    - "Ensure task blocks stay within their day/time columns"
+    - "Visual verify header layout and alignment in Day/Week/Month"
+    - "Confirm tasks remain contained and current-time line aligns"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "User requested calendar header and layout fixes; awaiting approval to run automated frontend tests on calendar views."
+    message: "Awaiting user confirmation before running automated frontend tests for the new minimal calendar headers."
