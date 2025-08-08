@@ -106,8 +106,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend endpoint verification for /api/*"
-    - "XP summary math (earned - spent)"
+    - "Backend endpoint verification for /api/* - COMPLETED"
+    - "XP summary math (earned - spent) - COMPLETED"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
