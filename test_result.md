@@ -81,38 +81,47 @@ backend:
 frontend:
   - task: "Calendar minimal UI adjustments (headers, month/year left, tasks containment)"
     implemented: true
-    working: NA
+    working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: NA
         agent: "main"
-        comment: "Made headers minimal: MON/TUE/WED with date number beneath; moved Month Year to left; ensured blocks fit within columns; reduced borders for minimal feel." 
+        comment: "Made headers minimal: MON/TUE/WED with date number beneath; moved Month Year to left; ensured blocks fit within columns; reduced borders for minimal feel."
+      - working: true
+        agent: "testing"
+        comment: "Calendar UI tested successfully. Headers display correctly with minimal design, month/year positioned on left, tasks properly contained within calendar cells. Navigation between Day/Week/Month views works smoothly."
   - task: "Rewards inventory UI (redeem/use; inventory section)"
     implemented: true
-    working: NA
+    working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: NA
         agent: "main"
         comment: "Added redeem button in store, inventory list with Use action and used status; wired to new backend APIs."
+      - working: true
+        agent: "testing"
+        comment: "Rewards inventory UI fully functional. Redeem buttons work correctly, items appear in My Redeemed Rewards section with proper status tracking, Use buttons function as expected and items disappear from Available list after use."
 metadata:
   - task: "Show current XP only and add reward animations"
     implemented: true
-    working: NA
+    working: true
     file: "/app/frontend/src/App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: NA
         agent: "main"
         comment: "XPBadge shows only balance; Rewards page header includes current XP; added minimalist B&W confetti animation on redeem/use; XP refreshes after actions."
+      - working: true
+        agent: "testing"
+        comment: "XP badge implementation perfect. Shows only current balance (format: 'XP: 25') in all three locations: sidebar, calendar header, and rewards page header. No earned/spent text visible. B&W confetti animations work flawlessly - 24 confetti pieces detected on both redeem and use actions. XP balance updates correctly: decreases on redeem, unchanged on use. All animations complete within 700ms as specified."
 
   created_by: "main_agent"
   version: "1.0"
