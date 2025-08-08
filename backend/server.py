@@ -8,7 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal, Dict, Any
 import uuid
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, time as dtime
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -42,8 +42,10 @@ class ActiveQuestCreate(BaseModel):
     quest_rank: Literal['Common', 'Rare', 'Epic', 'Legendary']
     due_date: date
     due_time: Optional[str] = None  # HH:MM (local user-facing), stored as string
+    duration_minutes: Optional[int] = 60
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
     redeem_reward: Optional[str] = None  # reward id from store (kept for compatibility)
+    recurring_id: Optional[str] = None  # link to Recurringtasks
 
 class ActiveQuest(ActiveQuestCreate):
     pass
@@ -53,8 +55,10 @@ class ActiveQuestUpdate(BaseModel):
     quest_rank: Optional[Literal['Common', 'Rare', 'Epic', 'Legendary']] = None
     due_date: Optional[date] = None
     due_time: Optional[str] = None
+    duration_minutes: Optional[int] = None
     status: Optional[Literal['Pending', 'In Progress', 'Completed', 'Incomplete']] = None
     redeem_reward: Optional[str] = None
+    recurring_id: Optional[str] = None
 
 class CompletedQuest(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -333,7 +337,6 @@ async def list_recurring():
     cur = db.Recurringtasks.find({}, {"_id": 0})
     return [RecurringTask(**doc) async for doc in cur]
 
-
 # --- Recurring helpers for custom rules ---
 def months_between(a: date, b: date) -> int:
     return (b.year - a.year) * 12 + (b.month - a.month)
@@ -529,6 +532,7 @@ async def run_recurring_generation():
                 due_date=today,
                 status='Pending',
                 redeem_reward=None,
+                recurring_id=t['id'],
             )
             quest_data = serialize_dates_for_mongo(new_q.dict())
             await db.ActiveQuests.insert_one(quest_data)
@@ -560,6 +564,92 @@ async def put_rules(body: RulesUpsert):
     doc = RulesDoc(content=body.content)
     await db.Rules.insert_one(doc.dict())
     return doc
+
+# ---- New: Per-quest recurrence management ----
+class QuestRecurrencePayload(BaseModel):
+    frequency: Literal['Daily', 'Weekly', 'Weekdays', 'Monthly', 'Annual']
+    days: Optional[str] = None
+    monthly_on_date: Optional[int] = None
+    interval: Optional[int] = 1
+    monthly_mode: Optional[Literal['date','weekday']] = None
+    monthly_week_index: Optional[int] = None
+    monthly_weekday: Optional[str] = None
+    ends: Optional[Literal['never','on_date','after']] = 'never'
+    until_date: Optional[date] = None
+    count: Optional[int] = None
+
+@api_router.get("/quests/active/{quest_id}/recurrence", response_model=Optional[RecurringTask])
+async def get_quest_recurrence(quest_id: str):
+    q = await db.ActiveQuests.find_one({"id": quest_id})
+    if not q:
+        raise HTTPException(status_code=404, detail="Quest not found")
+    rec_id = q.get('recurring_id')
+    if not rec_id:
+        return None
+    rec = await db.Recurringtasks.find_one({"id": rec_id}, {"_id": 0})
+    if not rec:
+        return None
+    return RecurringTask(**rec)
+
+@api_router.put("/quests/active/{quest_id}/recurrence", response_model=RecurringTask)
+async def put_quest_recurrence(quest_id: str, body: QuestRecurrencePayload):
+    q = await db.ActiveQuests.find_one({"id": quest_id})
+    if not q:
+        raise HTTPException(status_code=404, detail="Quest not found")
+    rec_id = q.get('recurring_id')
+    if rec_id:
+        # update existing recurring
+        await db.Recurringtasks.update_one({"id": rec_id}, {"$set": {
+            "task_name": q["quest_name"],
+            "quest_rank": q["quest_rank"],
+            "frequency": body.frequency,
+            "days": body.days,
+            "monthly_on_date": body.monthly_on_date,
+            "interval": body.interval,
+            "monthly_mode": body.monthly_mode,
+            "monthly_week_index": body.monthly_week_index,
+            "monthly_weekday": body.monthly_weekday,
+            "ends": body.ends,
+            "until_date": body.until_date,
+            "count": body.count,
+            "status": q["status"],
+        }})
+        rec = await db.Recurringtasks.find_one({"id": rec_id}, {"_id": 0})
+        return RecurringTask(**rec)
+    # create new recurring
+    new_rec = RecurringTask(
+        task_name=q["quest_name"],
+        quest_rank=q["quest_rank"],
+        frequency=body.frequency,
+        days=body.days,
+        monthly_on_date=body.monthly_on_date,
+        interval=body.interval,
+        monthly_mode=body.monthly_mode,
+        monthly_week_index=body.monthly_week_index,
+        monthly_weekday=body.monthly_weekday,
+        ends=body.ends,
+        until_date=body.until_date,
+        count=body.count,
+        status=q["status"],
+        start_date=datetime.now(timezone.utc).date(),
+    )
+    await db.Recurringtasks.insert_one(serialize_dates_for_mongo(new_rec.dict()))
+    await db.ActiveQuests.update_one({"id": quest_id}, {"$set": {"recurring_id": new_rec.id}})
+    return new_rec
+
+@api_router.delete("/quests/active/{quest_id}/recurrence")
+async def delete_quest_recurrence(quest_id: str, delete_rule: bool = True):
+    q = await db.ActiveQuests.find_one({"id": quest_id})
+    if not q:
+        raise HTTPException(status_code=404, detail="Quest not found")
+    rec_id = q.get('recurring_id')
+    if not rec_id:
+        return {"ok": True}
+    # unlink quest
+    await db.ActiveQuests.update_one({"id": quest_id}, {"$set": {"recurring_id": None}})
+    if delete_rule:
+        await db.Recurringtasks.delete_one({"id": rec_id})
+    return {"ok": True}
 
 # Include the router in the main app
 app.include_router(api_router)
