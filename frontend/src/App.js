@@ -510,7 +510,7 @@ function ActiveQuests({ hideExtras=false }){
   const [repeat, setRepeat] = useState('none'); // existing quick add select
 
   // Quick create from selection
-  const [quick, setQuick] = useState({ open:false, dateStr:'', startMin:0, duration:60 });
+  const [quick, setQuick] = useState({ open:false, dateStr:'', startMin:0, duration:60, allDay:false });
 
   const fetchAll = async () => {
     const q = await api.get(`/quests/active`);
