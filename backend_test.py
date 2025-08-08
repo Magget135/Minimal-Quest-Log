@@ -334,6 +334,171 @@ class QuestTrackerTester:
             self.log_test("Rules", False, f"Exception: {str(e)}")
         return False
         
+    def test_due_time_regression(self):
+        """Test due_time support regression - create, list, update, remove due_time"""
+        print("\n🕐 Testing due_time functionality regression...")
+        success_count = 0
+        created_quest_ids = []
+        
+        try:
+            today = date.today().isoformat()
+            
+            # 1. Create Active Quest with due_time
+            quest_a_data = {
+                "quest_name": "Timed Task A",
+                "quest_rank": "Common",
+                "due_date": today,
+                "due_time": "15:30",
+                "status": "Pending"
+            }
+            response_a = self.session.post(f"{self.base_url}/quests/active", json=quest_a_data)
+            if response_a.status_code == 200:
+                data_a = response_a.json()
+                quest_a_id = data_a.get("id")
+                created_quest_ids.append(quest_a_id)
+                if data_a.get("due_time") == "15:30":
+                    self.log_test("Create quest with due_time", True, f"Quest A created with due_time: {data_a.get('due_time')}")
+                    success_count += 1
+                else:
+                    self.log_test("Create quest with due_time", False, f"due_time not preserved: {data_a}")
+            else:
+                self.log_test("Create quest with due_time", False, f"Status: {response_a.status_code}, Response: {response_a.text}")
+                
+            # 2. Create another Active Quest with earlier time
+            quest_b_data = {
+                "quest_name": "Timed Task B",
+                "quest_rank": "Common",
+                "due_date": today,
+                "due_time": "09:00",
+                "status": "Pending"
+            }
+            response_b = self.session.post(f"{self.base_url}/quests/active", json=quest_b_data)
+            if response_b.status_code == 200:
+                data_b = response_b.json()
+                quest_b_id = data_b.get("id")
+                created_quest_ids.append(quest_b_id)
+                if data_b.get("due_time") == "09:00":
+                    self.log_test("Create quest with earlier due_time", True, f"Quest B created with due_time: {data_b.get('due_time')}")
+                    success_count += 1
+                else:
+                    self.log_test("Create quest with earlier due_time", False, f"due_time not preserved: {data_b}")
+            else:
+                self.log_test("Create quest with earlier due_time", False, f"Status: {response_b.status_code}, Response: {response_b.text}")
+                
+            # 3. List Active quests and verify due_time strings are present
+            list_response = self.session.get(f"{self.base_url}/quests/active")
+            if list_response.status_code == 200:
+                active_quests = list_response.json()
+                quest_a_found = None
+                quest_b_found = None
+                
+                for quest in active_quests:
+                    if quest.get("id") == quest_a_id:
+                        quest_a_found = quest
+                    elif quest.get("id") == quest_b_id:
+                        quest_b_found = quest
+                        
+                if (quest_a_found and quest_a_found.get("due_time") == "15:30" and
+                    quest_b_found and quest_b_found.get("due_time") == "09:00"):
+                    self.log_test("List quests with due_time", True, f"Both quests found with correct due_time values")
+                    success_count += 1
+                else:
+                    self.log_test("List quests with due_time", False, f"due_time values not correct in list: A={quest_a_found.get('due_time') if quest_a_found else 'not found'}, B={quest_b_found.get('due_time') if quest_b_found else 'not found'}")
+            else:
+                self.log_test("List quests with due_time", False, f"Status: {list_response.status_code}")
+                
+            # 4. Update due_time of Quest A
+            if quest_a_id:
+                update_data = {"due_time": "08:00"}
+                update_response = self.session.patch(f"{self.base_url}/quests/active/{quest_a_id}", json=update_data)
+                if update_response.status_code == 200:
+                    updated_data = update_response.json()
+                    if updated_data.get("due_time") == "08:00":
+                        self.log_test("Update due_time", True, f"Quest A due_time updated to: {updated_data.get('due_time')}")
+                        success_count += 1
+                    else:
+                        self.log_test("Update due_time", False, f"due_time not updated correctly: {updated_data.get('due_time')}")
+                else:
+                    self.log_test("Update due_time", False, f"Status: {update_response.status_code}, Response: {update_response.text}")
+                    
+            # 5. Remove due_time from Quest B (set to null)
+            if quest_b_id:
+                remove_data = {"due_time": None}
+                remove_response = self.session.patch(f"{self.base_url}/quests/active/{quest_b_id}", json=remove_data)
+                if remove_response.status_code == 200:
+                    removed_data = remove_response.json()
+                    if removed_data.get("due_time") is None:
+                        self.log_test("Remove due_time", True, f"Quest B due_time removed (null)")
+                        success_count += 1
+                    else:
+                        self.log_test("Remove due_time", False, f"due_time not removed: {removed_data.get('due_time')}")
+                else:
+                    self.log_test("Remove due_time", False, f"Status: {remove_response.status_code}, Response: {remove_response.text}")
+                    
+            # 6. Verify recurring tasks unaffected (no due_time)
+            recurring_data = {
+                "task_name": "Daily No Time",
+                "quest_rank": "Common",
+                "frequency": "Daily"
+            }
+            recurring_response = self.session.post(f"{self.base_url}/recurring", json=recurring_data)
+            if recurring_response.status_code == 200:
+                recurring_id = recurring_response.json().get("id")
+                
+                # Run recurring generation
+                run_response = self.session.post(f"{self.base_url}/recurring/run")
+                if run_response.status_code == 200:
+                    # Check if new active quest has no due_time
+                    new_list_response = self.session.get(f"{self.base_url}/quests/active")
+                    if new_list_response.status_code == 200:
+                        new_active_quests = new_list_response.json()
+                        daily_no_time_quest = None
+                        for quest in new_active_quests:
+                            if quest.get("quest_name") == "Daily No Time":
+                                daily_no_time_quest = quest
+                                break
+                                
+                        if daily_no_time_quest and daily_no_time_quest.get("due_time") is None:
+                            self.log_test("Recurring unaffected by due_time", True, f"Recurring-generated quest has no due_time")
+                            success_count += 1
+                        else:
+                            self.log_test("Recurring unaffected by due_time", False, f"Recurring quest has unexpected due_time: {daily_no_time_quest.get('due_time') if daily_no_time_quest else 'quest not found'}")
+                            
+                        # Clean up recurring quest
+                        if daily_no_time_quest:
+                            created_quest_ids.append(daily_no_time_quest.get("id"))
+                            
+                # Clean up recurring task
+                if recurring_id:
+                    self.session.delete(f"{self.base_url}/recurring/{recurring_id}")
+            else:
+                self.log_test("Recurring unaffected by due_time", False, f"Failed to create recurring task: {recurring_response.status_code}")
+                
+        except Exception as e:
+            self.log_test("due_time regression test", False, f"Exception: {str(e)}")
+            
+        # 7. Cleanup: Delete created Active quests
+        cleanup_success = 0
+        for quest_id in created_quest_ids:
+            if quest_id:
+                try:
+                    delete_response = self.session.delete(f"{self.base_url}/quests/active/{quest_id}")
+                    if delete_response.status_code == 200:
+                        cleanup_success += 1
+                except Exception as e:
+                    print(f"   Cleanup warning: Could not delete quest {quest_id}: {str(e)}")
+                    
+        if cleanup_success > 0:
+            print(f"   Cleanup: Deleted {cleanup_success} test quests")
+            
+        expected_tests = 6  # Total number of sub-tests
+        if success_count == expected_tests:
+            self.log_test("due_time regression complete", True, f"All {success_count}/{expected_tests} due_time tests passed")
+            return True
+        else:
+            self.log_test("due_time regression complete", False, f"Only {success_count}/{expected_tests} due_time tests passed")
+            return False
+
     def test_edge_cases(self):
         """Test edge cases: redeem more XP than available, delete reward"""
         success_count = 0
