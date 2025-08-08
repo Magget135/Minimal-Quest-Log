@@ -97,7 +97,7 @@ const SNAP_MIN = 15;
 const snapMin = (mins) => Math.round(mins / SNAP_MIN) * SNAP_MIN;
 const hhmm = (m) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 
-function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask}){
+function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateAtDay}){
   let cells = [];
   const headerTitle = anchorDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
