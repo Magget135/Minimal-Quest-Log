@@ -357,7 +357,7 @@ async def redeem_reward(input: RewardRedeemInput):
     if not reward:
         raise HTTPException(status_code=404, detail="Reward not found")
     summary = await compute_xp_summary()
-    if summary["balance"] &lt; int(reward["xp_cost"]):
+    if summary["balance"] < int(reward["xp_cost"]):
         raise HTTPException(status_code=400, detail="Not enough XP to redeem")
     # Create log and inventory record
     now = datetime.now(timezone.utc)
