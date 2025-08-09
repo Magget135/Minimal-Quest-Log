@@ -36,6 +36,22 @@ STATUS_OPTIONS = ["Pending", "In Progress", "Completed", "Incomplete"]
 FREQUENCY_OPTIONS = ["Daily", "Weekly", "Weekdays", "Monthly", "Annual"]
 
 # --- Models ---
+class Category(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    color: str  # hex color like #A3B18A
+    active: bool = True
+
+class CategoryCreate(BaseModel):
+    name: str
+    color: str
+    active: Optional[bool] = True
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+    active: Optional[bool] = None
+
 class ActiveQuestCreate(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     quest_name: str
@@ -46,6 +62,7 @@ class ActiveQuestCreate(BaseModel):
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
     redeem_reward: Optional[str] = None  # reward id from store (kept for compatibility)
     recurring_id: Optional[str] = None  # link to Recurringtasks
+    category_id: Optional[str] = None  # link to Categories
 
 class ActiveQuest(ActiveQuestCreate):
     pass
@@ -59,6 +76,7 @@ class ActiveQuestUpdate(BaseModel):
     status: Optional[Literal['Pending', 'In Progress', 'Completed', 'Incomplete']] = None
     redeem_reward: Optional[str] = None
     recurring_id: Optional[str] = None
+    category_id: Optional[str] = None
 
 class CompletedQuest(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -167,6 +185,51 @@ async def root():
 async def health():
     return {"ok": True}
 
+# Categories CRUD
+@api_router.get("/categories", response_model=List[Category])
+async def list_categories():
+    cur = db.Categories.find({}, {"_id": 0}).sort("name", 1)
+    return [Category(**doc) async for doc in cur]
+
+@api_router.post("/categories", response_model=Category)
+async def create_category(body: CategoryCreate):
+    # Allow idempotent by name if needed: if exists with same name, return it
+    existing = await db.Categories.find_one({"name": body.name}, {"_id": 0})
+    if existing:
+        # optionally update color/active if provided
+        updates = {}
+        if body.color and existing.get("color") != body.color:
+            updates["color"] = body.color
+        if body.active is not None and existing.get("active") != body.active:
+            updates["active"] = body.active
+        if updates:
+            await db.Categories.update_one({"id": existing["id"]}, {"$set": updates})
+            existing = await db.Categories.find_one({"id": existing["id"]}, {"_id": 0})
+        return Category(**existing)
+    cat = Category(name=body.name, color=body.color, active=bool(body.active))
+    await db.Categories.insert_one(cat.dict())
+    return cat
+
+@api_router.patch("/categories/{category_id}", response_model=Category)
+async def patch_category(category_id: str, body: CategoryUpdate):
+    doc = await db.Categories.find_one({"id": category_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Category not found")
+    update = {k: v for k, v in body.dict(exclude_unset=True).items() if v is not None}
+    if update:
+        await db.Categories.update_one({"id": category_id}, {"$set": update})
+    updated = await db.Categories.find_one({"id": category_id}, {"_id": 0})
+    return Category(**updated)
+
+@api_router.delete("/categories/{category_id}")
+async def delete_category(category_id: str):
+    # Unlink category from tasks first (idempotent)
+    await db.ActiveQuests.update_many({"category_id": category_id}, {"$set": {"category_id": None}})
+    res = await db.Categories.delete_one({"id": category_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return {"ok": True}
+
 # ActiveQuests CRUD
 @api_router.get("/quests/active", response_model=List[ActiveQuest])
 async def list_active_quests():
@@ -188,15 +251,13 @@ async def update_active_quest(quest_id: str, input: ActiveQuestUpdate):
     doc = await db.ActiveQuests.find_one({"id": quest_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Quest not found")
-    # Handle None values explicitly for optional fields like due_time
+    # Handle None values explicitly for optional fields like due_time and category_id
     input_dict = input.dict(exclude_unset=True)
     update = {}
     for k, v in input_dict.items():
-        if k == "due_time":
-            # Allow None for due_time to remove it
+        if k in ("due_time", "category_id"):
             update[k] = v
         elif v is not None:
-            # For other fields, exclude None values
             update[k] = v
     if "quest_rank" in update and update["quest_rank"] not in RANK_XP:
         raise HTTPException(status_code=400, detail="Invalid quest_rank")
@@ -296,7 +357,7 @@ async def redeem_reward(input: RewardRedeemInput):
     if not reward:
         raise HTTPException(status_code=404, detail="Reward not found")
     summary = await compute_xp_summary()
-    if summary["balance"] < int(reward["xp_cost"]):
+    if summary["balance"] &lt; int(reward["xp_cost"]):
         raise HTTPException(status_code=400, detail="Not enough XP to redeem")
     # Create log and inventory record
     now = datetime.now(timezone.utc)
@@ -358,7 +419,7 @@ def nth_weekday_day(year: int, month: int, weekday_idx: int, n: int) -> int:
     while d.month == month:
         if d.weekday() == weekday_idx:
             days.append(d.day)
-        d = d.replace(day=d.day + 1) if d.day < 28 else (d + datetime.resolution).date()  # fallback
+        d = d.replace(day=d.day + 1) if d.day &lt; 28 else (d + datetime.resolution).date()  # fallback
         try:
             d = date(d.year, d.month, d.day)
         except Exception:
@@ -456,20 +517,20 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
     ends = task.get('ends') or 'never'
     if ends == 'on_date':
         until = task.get('until_date')
-        if until and today > until:
+        if until and today &gt; until:
             return False
     if ends == 'after':
         cnt = int(task.get('count') or 0)
-        if cnt and occurrences >= cnt:
+        if cnt and occurrences &gt;= cnt:
             return False
 
     if freq == 'Daily':
         # every N days
         delta_days = (today - start).days
-        return delta_days >= 0 and delta_days % max(1, interval) == 0
+        return delta_days &gt;= 0 and delta_days % max(1, interval) == 0
 
     if freq == 'Weekdays':
-        return today.weekday() < 5
+        return today.weekday() &lt; 5
 
     if freq == 'Weekly':
         # every N weeks on selected days
@@ -481,7 +542,7 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
         if today.weekday() not in indices:
             return False
         weeks = ((today - start).days) // 7
-        return weeks >= 0 and weeks % max(1, interval) == 0
+        return weeks &gt;= 0 and weeks % max(1, interval) == 0
 
     if freq == 'Monthly':
         monthly_mode = task.get('monthly_mode') or ('date' if task.get('monthly_on_date') else None)
@@ -493,7 +554,7 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
                 return False
             # Check interval by months difference from start
             m = months_between(start, today)
-            if m < 0 or (m % max(1, interval)) != 0:
+            if m &lt; 0 or (m % max(1, interval)) != 0:
                 return False
             day = nth_weekday_day(today.year, today.month, wd_idx, idx)
             return today.day == day
@@ -501,13 +562,13 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
             # by date
             target_day = int(task.get('monthly_on_date') or start.day)
             m = months_between(start, today)
-            if m < 0 or (m % max(1, interval)) != 0:
+            if m &lt; 0 or (m % max(1, interval)) != 0:
                 return False
             return today.day == target_day
 
     if freq == 'Annual':
         y = years_between(start, today)
-        if y < 0 or (y % max(1, interval)) != 0:
+        if y &lt; 0 or (y % max(1, interval)) != 0:
             return False
         return (today.month, today.day) == (start.month, start.day)
 
@@ -656,6 +717,72 @@ async def delete_quest_recurrence(quest_id: str, delete_rule: bool = True):
     if delete_rule:
         await db.Recurringtasks.delete_one({"id": rec_id})
     return {"ok": True}
+
+# ---- Holidays 2025 ----
+HOLIDAYS_2025 = [
+    {"name": "New Year’s Day", "date": date(2025, 1, 1)},
+    {"name": "MLK Jr. Day", "date": date(2025, 1, 20)},
+    {"name": "Washington’s Birthday (Presidents Day)", "date": date(2025, 2, 17)},
+    {"name": "Memorial Day", "date": date(2025, 5, 26)},
+    {"name": "Juneteenth", "date": date(2025, 6, 19)},
+    {"name": "Independence Day", "date": date(2025, 7, 4)},
+    {"name": "Labor Day", "date": date(2025, 9, 1)},
+    {"name": "Columbus Day (Indigenous Peoples’ Day)", "date": date(2025, 10, 13)},
+    {"name": "Veterans Day", "date": date(2025, 11, 11)},
+    {"name": "Thanksgiving Day", "date": date(2025, 11, 27)},
+    {"name": "Christmas Day", "date": date(2025, 12, 25)},
+]
+
+HOLIDAYS_CATEGORY_NAME = "Holidays"
+HOLIDAYS_CATEGORY_COLOR = "#A3B18A"  # soft sage green
+
+async def ensure_holidays_category() -> Category:
+    existing = await db.Categories.find_one({"name": HOLIDAYS_CATEGORY_NAME}, {"_id": 0})
+    if existing:
+        # ensure color is set to the configured value (non-destructive if already same)
+        if existing.get("color") != HOLIDAYS_CATEGORY_COLOR:
+            await db.Categories.update_one({"id": existing["id"]}, {"$set": {"color": HOLIDAYS_CATEGORY_COLOR}})
+            existing = await db.Categories.find_one({"id": existing["id"]}, {"_id": 0})
+        return Category(**existing)
+    cat = Category(name=HOLIDAYS_CATEGORY_NAME, color=HOLIDAYS_CATEGORY_COLOR, active=True)
+    await db.Categories.insert_one(cat.dict())
+    return cat
+
+@api_router.get("/holidays/2025")
+async def list_holidays_2025():
+    return [{"name": h["name"], "date": h["date"].isoformat()} for h in HOLIDAYS_2025]
+
+@api_router.post("/holidays/seed-2025")
+async def seed_holidays_2025():
+    cat = await ensure_holidays_category()
+    created = 0
+    skipped = 0
+    for h in HOLIDAYS_2025:
+        qname = h["name"]
+        qdate = h["date"].isoformat()
+        # Idempotent check: same name + date + category
+        existing = await db.ActiveQuests.find_one({
+            "quest_name": qname,
+            "due_date": qdate,
+            "category_id": cat.id,
+        })
+        if existing:
+            skipped += 1
+            continue
+        new_q = ActiveQuest(
+            quest_name=qname,
+            quest_rank='Common',
+            due_date=h["date"],
+            due_time=None,  # all-day
+            duration_minutes=None,
+            status='Pending',
+            redeem_reward=None,
+            recurring_id=None,
+            category_id=cat.id,
+        )
+        await db.ActiveQuests.insert_one(serialize_dates_for_mongo(new_q.dict()))
+        created += 1
+    return {"created": created, "skipped": skipped, "category_id": cat.id}
 
 # Include the router in the main app
 app.include_router(api_router)
