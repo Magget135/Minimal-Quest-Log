@@ -78,6 +78,7 @@ class ActiveQuestUpdate(BaseModel):
     redeem_reward: Optional[str] = None
     recurring_id: Optional[str] = None
     category_id: Optional[str] = None
+    is_event: Optional[bool] = None
 
 class CompletedQuest(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
