@@ -781,6 +781,7 @@ async def seed_holidays_2025():
             redeem_reward=None,
             recurring_id=None,
             category_id=cat.id,
+            is_event=True,
         )
         await db.ActiveQuests.insert_one(serialize_dates_for_mongo(new_q.dict()))
         created += 1
