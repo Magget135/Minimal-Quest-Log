@@ -63,6 +63,7 @@ class ActiveQuestCreate(BaseModel):
     redeem_reward: Optional[str] = None  # reward id from store (kept for compatibility)
     recurring_id: Optional[str] = None  # link to Recurringtasks
     category_id: Optional[str] = None  # link to Categories
+    is_event: Optional[bool] = False  # distinguishes events from tasks
 
 class ActiveQuest(ActiveQuestCreate):
     pass
