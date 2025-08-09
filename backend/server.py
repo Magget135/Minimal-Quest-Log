@@ -127,6 +127,9 @@ class RecurringTask(BaseModel):
     count: Optional[int] = None  # total occurrences limit when ends='after'
     occurrences: Optional[int] = 0  # how many times added
     start_date: Optional[date] = None  # anchor for interval math
+    # Presentation/creation hints
+    category_id: Optional[str] = None
+    is_event: Optional[bool] = None
 
     status: Literal['Pending', 'In Progress', 'Completed', 'Incomplete'] = 'Pending'
     last_added: Optional[date] = None
