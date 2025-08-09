@@ -314,6 +314,12 @@ class CategoriesHolidaysTester:
                         quest_names = [quest.get("quest_name") for quest in holiday_quests]
                         all_names_match = all(name in quest_names for name in expected_names)
                         
+                        if not all_names_match:
+                            print(f"   Expected names: {expected_names}")
+                            print(f"   Found names: {quest_names}")
+                            missing = [name for name in expected_names if name not in quest_names]
+                            print(f"   Missing: {missing}")
+                        
                         # Check that all holiday quests have due_time=null and duration_minutes=null
                         all_all_day = all(
                             quest.get("due_time") is None and quest.get("duration_minutes") is None
