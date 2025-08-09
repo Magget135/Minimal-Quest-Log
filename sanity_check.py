@@ -9,7 +9,7 @@ import json
 from datetime import datetime, date
 
 # Use the production backend URL from frontend/.env
-BASE_URL = "https://ace18cbc-8eb0-42fb-ac3e-6c117ce871d5.preview.emergentagent.com/api"
+BASE_URL = "https://fd8786ae-2506-4181-9443-332a0afbad8b.preview.emergentagent.com/api"
 
 def test_health_endpoint():
     """Test GET /api/health"""
