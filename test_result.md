@@ -89,6 +89,28 @@ backend:
       - working: true
         agent: "testing"
         comment: "Review validation completed successfully. All 5 specific tests passed: 1) Create active quest with duration_minutes=90 and verify field persists in GET /api/quests/active ✅, 2) PATCH /api/quests/active/{id} to change due_time=16:45 and duration_minutes=120, verified ✅, 3a) PUT /api/quests/active/{id}/recurrence with Weekly config (Mon,Wed,Fri), then GET returns same config ✅, 3b) DELETE /api/quests/active/{id}/recurrence?delete_rule=true unlinks quest and deletes rule; GET returns null and rule removed from Recurringtasks ✅, 4) POST /api/recurring/run works and sets recurring_id on generated quests ✅. Fixed TypeError in is_today_for_task function where start_date string wasn't being converted to date object. No 5xx errors detected after fix."
+  - task: "Categories API endpoints (CRUD operations)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Categories API testing completed successfully. All CRUD operations working: 1) POST /api/categories creates category with id, active=true ✅, 2) GET /api/categories returns all categories including newly created ✅, 3) PATCH /api/categories/{id} updates name, color, active fields correctly ✅, 4) DELETE /api/categories/{id} returns {ok:true} and removes from list ✅, 5) Verification confirms deletion truly removes category from GET response ✅. Category delete behavior properly unlinks tasks (sets category_id=null) while preserving the quest ✅."
+  - task: "Holidays 2025 endpoints and seeding"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Holidays 2025 feature testing completed successfully. All tests passed: 1) GET /api/holidays/2025 returns 11 entries with valid names and ISO date strings ✅, 2) POST /api/holidays/seed-2025 first run creates 11 holiday quests with proper category_id ✅, 3) Second POST /api/holidays/seed-2025 shows idempotent behavior (created:0, skipped:11) ✅, 4) GET /api/quests/active contains 11 holiday quests with due_time=null, duration_minutes=null, and correct category_id ✅. Holiday category 'Holidays' with color '#A3B18A' created automatically. All holiday quests are properly formatted as all-day events."
 frontend:
   - task: "Calendar minimal UI adjustments (headers, month/year left, tasks containment)"
     implemented: true
