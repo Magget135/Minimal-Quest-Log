@@ -10,6 +10,24 @@ const API = `${BACKEND_URL}/api`;
 const ranks = ["Common", "Rare", "Epic", "Legendary"];
 const statuses = ["Pending", "In Progress", "Completed", "Incomplete"];
 
+const COLOR_PALETTE = [
+  "#A3B18A", "#F4A261", "#E9C46A", "#2A9D8F", "#457B9D", "#B56576",
+  "#6D597A", "#B8B8FF", "#FFD6A5", "#FDFFB6", "#CAFFBF", "#9BF6FF",
+  "#A0C4FF", "#BDB2FF", "#FFC6FF", "#D0F4DE"
+];
+const UNCATEGORIZED = { id: null, name: "Uncategorized", color: "#B0B0B0", active: true };
+
+function hexToRgba(hex, alpha=0.2){
+  try{
+    const h = hex.replace('#','');
+    const bigint = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }catch{ return `rgba(0,0,0,${alpha})`; }
+}
+
 function useApi() {
   const api = useMemo(() => axios.create({ baseURL: API }), []);
   return api;
@@ -94,10 +112,11 @@ function startOfMonthGridMon(d){ const first = new Date(d.getFullYear(), d.getMo
 const HOUR_HEIGHT = 48; // px
 const MINUTE_PX = HOUR_HEIGHT / 60; // 0.8px per min
 const SNAP_MIN = 15;
+const SINGLE_CLICK_DEFAULT = 30; // minutes
 const snapMin = (mins) => Math.round(mins / SNAP_MIN) * SNAP_MIN;
 const hhmm = (m) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 
-function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateAtDay}){
+function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateAtDay, getCategoryColor}){
   let cells = [];
   const headerTitle = anchorDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
@@ -143,11 +162,16 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
             <div key={idx} className="calendar-cell" onDoubleClick={()=> onCreateAtDay && onCreateAtDay(day)}>
               <div className="calendar-day-number">{day.getDate()}</div>
               <div className="calendar-tasks">
-                {items.map(item => (
-                  <div key={item.id} className="task-chip" title={item.quest_name} onClick={()=>onOpenTask(item)}>
-                    {item.quest_name}
-                  </div>
-                ))}
+                {items.map(item => {
+                  const color = getCategoryColor(item.category_id);
+                  const bg = hexToRgba(color, 0.2);
+                  const style = { backgroundColor: bg, color: '#111', border: `1px solid ${color}` };
+                  return (
+                    <div key={item.id} className="task-chip" style={style} title={item.quest_name} onClick={()=>onOpenTask(item)}>
+                      {item.quest_name}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
@@ -157,7 +181,7 @@ function MonthCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onView
   );
 }
 
-function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection}){
+function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection, getCategoryColor}){
   const isWeek = view === 'week';
   const start = isWeek ? startOfWeekMon(anchorDate) : new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate());
   const days = isWeek ? Array.from({length:7}, (_,i)=> addDays(start,i)) : [start];
@@ -218,9 +242,13 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
           {days.map(d => (
             <div key={ymd(d)} className="col">
               <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-                {byDate[ymd(d)].allDay.map(item => (
-                  <div key={item.id} className="task-chip" onClick={()=>onOpenTask(item)}>{item.quest_name}</div>
-                ))}
+                {byDate[ymd(d)].allDay.map(item => {
+                  const color = getCategoryColor(item.category_id);
+                  const bg = hexToRgba(color, 0.2);
+                  return (
+                    <div key={item.id} className="task-chip" style={{ backgroundColor: bg, border: `1px solid ${color}` }} onClick={()=>onOpenTask(item)}>{item.quest_name}</div>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -234,7 +262,7 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
             ))}
           </div>
           {days.map(d => (
-            <DayColumn key={ymd(d)} day={d} items={byDate[ymd(d)].timed} onOpenTask={onOpenTask} onCreateSelection={onCreateSelection} />
+            <DayColumn key={ymd(d)} day={d} items={byDate[ymd(d)].timed} onOpenTask={onOpenTask} onCreateSelection={onCreateSelection} getCategoryColor={getCategoryColor} />
           ))}
         </div>
       </div>
@@ -242,7 +270,7 @@ function TimeCalendar({tasks, view, anchorDate, onPrev, onNext, onToday, onViewC
   );
 }
 
-function DayColumn({ day, items, onOpenTask, onCreateSelection }){
+function DayColumn({ day, items, onOpenTask, onCreateSelection, getCategoryColor }){
   const colRef = useRef(null);
   const [draft, setDraft] = useState(null); // { top, height }
   const [dragState, setDragState] = useState(null); // { id, mode: 'move'|'resize', startY, origStartMin, origDuration }
@@ -273,8 +301,9 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
         const dur = Math.max(SNAP_MIN, draft.duration);
         onCreateSelection(day, start, dur);
       } else {
-        // treat as simple click -> default 1 hr slot where clicked
-        onCreateSelection(day, startMin, SNAP_MIN);
+        // treat as simple click -> default 30 min slot where clicked
+        const dur = SINGLE_CLICK_DEFAULT;
+        onCreateSelection(day, startMin, dur);
       }
       setDraft(null);
     };
@@ -352,10 +381,15 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
     const height = Math.max(22, dur * MINUTE_PX);
     const endMin = startMin + dur;
     const label = `${hhmm(startMin)}–${hhmm(endMin)}`;
+    const color = getCategoryColor(t.category_id);
+    const style = { borderColor: color, boxShadow: `inset 4px 0 0 0 ${color}` };
     return (
-      <div key={t.id} className={`task-block ${dragState && dragState.id===t.id ? 'dragging':''}`} style={{ top, height }} title={t.quest_name} onMouseDown={(e)=>startMove(t,e)} onClick={()=>onOpenTask(t)}>
+      <div key={t.id} className={`task-block ${dragState && dragState.id===t.id ? 'dragging':''}`} style={{ top, height, ...style }} title={t.quest_name} onMouseDown={(e)=>startMove(t,e)} onClick={()=>onOpenTask(t)}>
         <span className="task-time">{t.due_time ? label : ''}</span>{t.quest_name}
         <div className="resize-handle" onMouseDown={(e)=>startResize(t,e)} />
+        {dragState && dragState.id===t.id ? (
+          <span className="live-time-badge">{label}</span>
+        ) : null}
       </div>
     );
   };
@@ -383,38 +417,41 @@ function DayColumn({ day, items, onOpenTask, onCreateSelection }){
   );
 }
 
-function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection, onCreateAtDay }){
+function Calendar({ tasks, view, anchorDate, onPrev, onNext, onToday, onViewChange, onOpenTask, onCreateSelection, onCreateAtDay, getCategoryColor }){
   if (view === 'month') {
-    return <MonthCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} onCreateAtDay={onCreateAtDay} />
+    return <MonthCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} onCreateAtDay={onCreateAtDay} getCategoryColor={getCategoryColor} />
   }
-  return <TimeCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} onCreateSelection={onCreateSelection} />
+  return <TimeCalendar tasks={tasks} view={view} anchorDate={anchorDate} onPrev={onPrev} onNext={onNext} onToday={onToday} onViewChange={onViewChange} onOpenTask={onOpenTask} onCreateSelection={onCreateSelection} getCategoryColor={getCategoryColor} />
 }
 
-function DeleteScopeModal({ open, onClose, onDeleteOnly, onDeleteAll }){
-  if(!open) return null;
+function PillDays({ value, onChange }){
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const selected = new Set(value || []);
+  const toggle = (d) => {
+    const next = new Set(selected);
+    if (next.has(d)) next.delete(d); else next.add(d);
+    onChange(Array.from(next));
+  };
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={e=>e.stopPropagation()}>
-        <div className="modal-header"><h3>Delete event</h3><button className="btn secondary" onClick={onClose}>Close</button></div>
-        <div style={{display:'flex', flexDirection:'column', gap:8}}>
-          <button className="btn secondary" onClick={onDeleteOnly}>Delete this event only</button>
-          <button className="btn secondary" onClick={onDeleteAll}>Delete this event and its recurrence</button>
-        </div>
-      </div>
+    <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+      {days.map(d => (
+        <button key={d} type="button" className={`pill ${selected.has(d)?'pill-on':'pill-off'}`} onClick={()=>toggle(d)}>{d}</button>
+      ))}
     </div>
   );
 }
 
-function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence, onRemoveRecurrence }){
+function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence, onRemoveRecurrence, categories }){
   const api = useApi();
   const [name, setName] = useState(task?.quest_name || "");
   const [due, setDue] = useState(task?.due_date || "");
   const [dueTime, setDueTime] = useState(task?.due_time || "");
   const [duration, setDuration] = useState(task?.duration_minutes || 60);
+  const [categoryId, setCategoryId] = useState(task?.category_id ?? null);
   const [repeatMode, setRepeatMode] = useState('none');
-  const [weeklyDays, setWeeklyDays] = useState('');
+  const [weeklyPills, setWeeklyPills] = useState([]);
 
-  useEffect(()=>{ setName(task?.quest_name || ""); setDue(task?.due_date || ""); setDueTime(task?.due_time || ""); setDuration(task?.duration_minutes || 60); }, [task]);
+  useEffect(()=>{ setName(task?.quest_name || ""); setDue(task?.due_date || ""); setDueTime(task?.due_time || ""); setDuration(task?.duration_minutes || 60); setCategoryId(task?.category_id ?? null); }, [task]);
   useEffect(()=>{
     let mounted = true;
     const loadRec = async () => {
@@ -424,9 +461,9 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence
         if(!mounted) return;
         if (data && data.frequency){
           setRepeatMode(data.frequency);
-          if (data.frequency === 'Weekly') setWeeklyDays(data.days || ''); else setWeeklyDays('');
+          if (data.frequency === 'Weekly') setWeeklyPills((data.days||'').split(',').map(s=>s.trim()).filter(Boolean)); else setWeeklyPills([]);
         } else {
-          setRepeatMode('none'); setWeeklyDays('');
+          setRepeatMode('none'); setWeeklyPills([]);
         }
       }catch{}
     };
@@ -446,7 +483,17 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence
           <input className="input" placeholder="Task name" value={name} onChange={e=>setName(e.target.value)} />
           <input className="input" type="date" value={due} onChange={e=>setDue(e.target.value)} />
           <input className="input" type="time" value={dueTime} onChange={e=>setDueTime(e.target.value)} />
-          <input className="input" type="number" min={15} step={15} value={duration} onChange={e=>setDuration(Number(e.target.value||60))} />
+          <select className="input" value={duration} onChange={e=>setDuration(Number(e.target.value))}>
+            {[15,30,45,60,90,120,180].map(v=> <option key={v} value={v}>{v} min</option>)}
+          </select>
+          {/* Category selector */}
+          <div className="row" style={{gap:6, alignItems:'center'}}>
+            <span className="small">Category:</span>
+            <select className="input" value={categoryId ?? 'null'} onChange={(e)=> setCategoryId(e.target.value==='null'? null : e.target.value)}>
+              <option value={'null'}>{UNCATEGORIZED.name}</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
         </div>
         <div className="row" style={{marginBottom:8, flexWrap:'wrap'}}>
           <select value={repeatMode} onChange={e=>setRepeatMode(e.target.value)}>
@@ -458,17 +505,17 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence
             <option value="Annual">Annual</option>
           </select>
           {repeatMode==='Weekly' && (
-            <input className="input" placeholder="Days (Mon, Wed)" value={weeklyDays} onChange={e=>setWeeklyDays(e.target.value)} />
+            <PillDays value={weeklyPills} onChange={setWeeklyPills} />
           )}
         </div>
         <div className="modal-actions">
           <button className="btn secondary" onClick={()=>onDelete(task)}>Delete</button>
           <button className="btn" onClick={()=>{
-            onSave({ ...task, quest_name: name, due_date: due, due_time: dueTime || null, duration_minutes: duration });
+            onSave({ ...task, quest_name: name, due_date: due, due_time: dueTime || null, duration_minutes: duration, category_id: categoryId });
             if (repeatMode==='none') {
               onRemoveRecurrence(task);
             } else {
-              const body = { frequency: repeatMode, days: repeatMode==='Weekly'? weeklyDays : undefined };
+              const body = { frequency: repeatMode, days: repeatMode==='Weekly'? weeklyPills.join(', ') : undefined };
               onSaveRecurrence(task, body);
             }
           }}>Save</button>
@@ -478,30 +525,108 @@ function TaskEditModal({ open, task, onClose, onSave, onDelete, onSaveRecurrence
   );
 }
 
-function QuickCreateModal({ open, dateStr, startMin, duration, allDay, onClose, onCreate }){
+function QuickCreateModal({ open, dateStr, startMin, duration, allDay, onClose, onCreate, categories }){
   const [title, setTitle] = useState("");
   const [rank, setRank] = useState("Common");
+  const [categoryId, setCategoryId] = useState(null);
+  const [isAllDay, setIsAllDay] = useState(!!allDay);
+  const [start, setStart] = useState(startMin || 9*60);
+  const [dur, setDur] = useState(duration || 60);
+  const [freq, setFreq] = useState('none');
+  const [weeklyPills, setWeeklyPills] = useState([]);
+
+  useEffect(()=>{ setIsAllDay(!!allDay); setStart(startMin || 9*60); setDur(duration || 60); }, [open, startMin, duration, allDay]);
+
   if(!open) return null;
+
+  const timeOptions = Array.from({length:96}, (_,i)=> i*15).map(m=> ({ m, label: hhmm(m) }));
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
         <div className="modal-header"><h3>Quick Add</h3><button className="btn secondary" onClick={onClose}>Close</button></div>
-        <div className="row" style={{flexWrap:'wrap'}}>
+        <div className="row" style={{flexWrap:'wrap', gap:8}}>
           <input className="input" placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} />
           <select value={rank} onChange={e=>setRank(e.target.value)}>{ranks.map(r=> <option key={r} value={r}>{r}</option>)}</select>
-          <span className="small">{dateStr} {allDay ? '(All-day)' : `${hhmm(startMin)}–${hhmm(startMin+duration)}`}</span>
+          <div className="row" style={{gap:6, alignItems:'center'}}>
+            <span className="small">Category:</span>
+            <select className="input" value={categoryId ?? 'null'} onChange={(e)=> setCategoryId(e.target.value==='null'? null : e.target.value)}>
+              <option value={'null'}>{UNCATEGORIZED.name}</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="row" style={{gap:10, alignItems:'center'}}>
+            <label className="small"><input type="checkbox" checked={isAllDay} onChange={(e)=>setIsAllDay(e.target.checked)} /> All-day</label>
+            {!isAllDay && (
+              <>
+                <select className="input" value={start} onChange={(e)=>setStart(Number(e.target.value))}>
+                  {timeOptions.map(o=> <option key={o.m} value={o.m}>{o.label}</option>)}
+                </select>
+                <select className="input" value={dur} onChange={(e)=>setDur(Number(e.target.value))}>
+                  {[15,30,45,60,90,120,180].map(v=> <option key={v} value={v}>{v} min</option>)}
+                </select>
+              </>
+            )}
+          </div>
+          <div className="row" style={{gap:8, alignItems:'center'}}>
+            <span className="small">Repeat:</span>
+            <select value={freq} onChange={e=>setFreq(e.target.value)}>
+              <option value="none">Does not repeat</option>
+              <option value="Daily">Daily</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Weekdays">Weekdays</option>
+              <option value="Monthly">Monthly</option>
+              <option value="Annual">Annual</option>
+            </select>
+            {freq === 'Weekly' && <PillDays value={weeklyPills} onChange={setWeeklyPills} />}
+          </div>
+          <span className="small">{dateStr} {isAllDay ? '(All-day)' : `${hhmm(start)}–${hhmm(start+dur)}`}</span>
         </div>
         <div className="modal-actions">
-          <button className="btn" onClick={()=> onCreate({ title, rank })} disabled={!title}>Create</button>
+          <button className="btn" onClick={()=> onCreate({ title, rank, category_id: categoryId, allDay: isAllDay, startMin: start, duration: dur, frequency: freq, days: weeklyPills })} disabled={!title}>Create</button>
         </div>
       </div>
     </div>
   );
 }
 
+function DeleteScopeModal({ open, onClose, onDeleteOnly, onDeleteAll }){
+  if(!open) return null;
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div className="modal-header"><h3>Delete event</h3><button className="btn secondary" onClick={onClose}>Close</button></div>
+        <div style={{display:'flex', flexDirection:'column', gap:8}}>
+          <button className="btn secondary" onClick={onDeleteOnly}>Delete this event only</button>
+          <button className="btn secondary" onClick={onDeleteAll}>Delete this event and its recurrence</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useCategories(){
+  const api = useApi();
+  const [cats, setCats] = useState([]);
+  const load = async () => {
+    const { data } = await api.get(`/categories`);
+    setCats(data);
+  };
+  const create = async ({ name, color, active=true }) => {
+    const { data } = await api.post(`/categories`, { name, color, active });
+    await load();
+    return data;
+  };
+  const patch = async (id, body) => { await api.patch(`/categories/${id}`, body); await load(); };
+  const remove = async (id) => { await api.delete(`/categories/${id}`); await load(); };
+  useEffect(()=>{ load(); },[]);
+  return { cats, load, create, patch, remove };
+}
+
 function ActiveQuests({ hideExtras=false }){
   const api = useApi();
   const { summary } = useXPSummary();
+  const { cats, create: createCat, patch: patchCat, remove: removeCat } = useCategories();
   const [list, setList] = useState([]);
 
   // calendar state
@@ -509,10 +634,24 @@ function ActiveQuests({ hideExtras=false }){
   const [anchorDate, setAnchorDate] = useState(new Date());
 
   const [form, setForm] = useState({ quest_name: "", quest_rank: "Common", due_date: "", due_time: "", status: "Pending" });
-  const [repeat, setRepeat] = useState('none'); // existing quick add select
+  const [repeat, setRepeat] = useState('none'); // legacy sidebar quick add select
 
-  // Quick create from selection
+  // Quick create from selection (modal)
   const [quick, setQuick] = useState({ open:false, dateStr:'', startMin:0, duration:60, allDay:false });
+
+  // Category filtering
+  const [selectedCatIds, setSelectedCatIds] = useState(()=>{
+    try{ const s = localStorage.getItem('categoryFilters'); return s ? JSON.parse(s) : null; }catch{return null}
+  });
+  const saveFilters = (ids) => { setSelectedCatIds(ids); try{ localStorage.setItem('categoryFilters', JSON.stringify(ids)); }catch{} };
+  const allIds = ["null", ...cats.map(c=>c.id)];
+  useEffect(()=>{ if (!selectedCatIds && cats.length){ saveFilters(allIds); } }, [cats]);
+
+  const getCategoryColor = (id) => {
+    if (!id) return UNCATEGORIZED.color;
+    const c = cats.find(x=>x.id===id);
+    return c?.color || UNCATEGORIZED.color;
+  };
 
   const fetchAll = async () => {
     const q = await api.get(`/quests/active`);
@@ -545,7 +684,7 @@ function ActiveQuests({ hideExtras=false }){
     e.preventDefault();
     if(!form.quest_name || !form.due_date) return;
     await api.post(`/quests/active`, { ...form, due_time: form.due_time || null, duration_minutes: 60 });
-    // Handle repeating presets like before
+    // Keep legacy sidebar quick add recurrence (unchanged)
     try {
       const d = new Date(form.due_date + 'T00:00:00');
       let recurringBody = null;
@@ -574,15 +713,26 @@ function ActiveQuests({ hideExtras=false }){
     setQuick({ open:true, dateStr: ymd(dayDate), startMin, duration });
   };
   const onCreateAtDay = (dayDate) => { setQuick({ open:true, dateStr: ymd(dayDate), startMin: 9*60, duration:60, allDay:true }); };
-  const confirmQuickCreate = async ({ title, rank }) => {
-    await api.post(`/quests/active`, {
+
+  // New quick add flow with recurrence per-quest
+  const confirmQuickCreate = async ({ title, rank, category_id, allDay, startMin, duration, frequency, days }) => {
+    // 1) Create quest
+    const body = {
       quest_name: title,
       quest_rank: rank,
       due_date: quick.dateStr,
-      due_time: quick.allDay ? null : hhmm(quick.startMin),
-      duration_minutes: quick.allDay ? undefined : quick.duration,
-      status: 'Pending'
-    });
+      due_time: allDay ? null : hhmm(startMin),
+      duration_minutes: allDay ? null : duration,
+      status: 'Pending',
+      category_id: category_id || null,
+    };
+    const { data: created } = await api.post(`/quests/active`, body);
+    // 2) Recurrence if any
+    if (frequency && frequency !== 'none') {
+      const rec = { frequency };
+      if (frequency === 'Weekly' && days && days.length) rec['days'] = days.join(', ');
+      await api.put(`/quests/active/${created.id}/recurrence`, rec);
+    }
     setQuick({ ...quick, open:false });
     await fetchAll();
   };
@@ -620,7 +770,7 @@ function ActiveQuests({ hideExtras=false }){
   const [confirmDelete, setConfirmDelete] = useState({ open:false, task:null });
   const openTask = (task) => setEditing(task);
   const closeTask = () => setEditing(null);
-  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null, duration_minutes: task.duration_minutes || 60 }); closeTask(); };
+  const saveTask = async (task) => { await updateRow(task.id, { quest_name: task.quest_name, due_date: task.due_date, due_time: task.due_time || null, duration_minutes: task.duration_minutes || 60, category_id: task.category_id ?? null }); closeTask(); };
   const deleteTask = async (task) => { setConfirmDelete({ open:true, task }); };
 
   const onDeleteOnly = async () => {
@@ -641,6 +791,21 @@ function ActiveQuests({ hideExtras=false }){
   const saveRecurrence = async (task, body) => { try{ await api.put(`/quests/active/${task.id}/recurrence`, body); }catch{} };
   const removeRecurrence = async (task) => { try{ await api.delete(`/quests/active/${task.id}/recurrence`, { params: { delete_rule: true } }); }catch{} };
 
+  // Filtering
+  const isEnabled = (t) => {
+    const idStr = t.category_id ?? 'null';
+    return selectedCatIds ? selectedCatIds.includes(idStr) : true;
+  };
+  const filteredList = list.filter(isEnabled);
+
+  // Sidebar Category Filters and Manager
+  const [newCat, setNewCat] = useState({ name: "", color: COLOR_PALETTE[0] });
+  const [editMap, setEditMap] = useState({}); // id -> { name, color, active }
+
+  const startEdit = (c) => setEditMap({...editMap, [c.id]: { name: c.name, color: c.color, active: c.active }});
+  const cancelEdit = (id) => { const m={...editMap}; delete m[id]; setEditMap(m); };
+  const saveEdit = async (id) => { const body = editMap[id]; await patchCat(id, body); cancelEdit(id); };
+
   return (
     <div className="app-shell">
       {/* Sidebar with all features (non-collapsible) */}
@@ -648,7 +813,95 @@ function ActiveQuests({ hideExtras=false }){
         <div style={{height:12}} />
         <MiniMonth selectedDate={anchorDate} onSelect={(d)=>{ setAnchorDate(d); setView('day'); }} />
 
-        {/* Quick add */}
+        {/* Category Filters */}
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Category Filters</div>
+          <div style={{display:'flex', gap:6, flexDirection:'column'}}>
+            <label className="small" style={{display:'flex', alignItems:'center', gap:6}}>
+              <input type="checkbox" checked={selectedCatIds?.includes('null') || false} onChange={(e)=>{
+                const ids = new Set(selectedCatIds||[]);
+                if (e.target.checked) ids.add('null'); else ids.delete('null');
+                saveFilters(Array.from(ids));
+              }} />
+              <span style={{display:'inline-flex', width:12, height:12, background:UNCATEGORIZED.color, borderRadius:3}} /> {UNCATEGORIZED.name}
+            </label>
+            {cats.map(c => (
+              <label key={c.id} className="small" style={{display:'flex', alignItems:'center', gap:6}}>
+                <input type="checkbox" checked={selectedCatIds?.includes(c.id) || false} onChange={(e)=>{
+                  const ids = new Set(selectedCatIds||[]);
+                  if (e.target.checked) ids.add(c.id); else ids.delete(c.id);
+                  saveFilters(Array.from(ids));
+                }} />
+                <span style={{display:'inline-flex', width:12, height:12, background:c.color, borderRadius:3}} /> {c.name}
+              </label>
+            ))}
+          </div>
+          <div className="row" style={{marginTop:8, gap:6}}>
+            <button className="btn secondary" onClick={()=> saveFilters(allIds)}>Select All</button>
+            <button className="btn secondary" onClick={()=> saveFilters([])}>Deselect All</button>
+          </div>
+        </div>
+
+        {/* Category Manager */}
+        <div className="card" style={{marginTop:16}}>
+          <div className="kicker" style={{marginBottom:8}}>Categories</div>
+          {/* Create new */}
+          <div className="row" style={{gap:6, flexWrap:'wrap'}}>
+            <input className="input" placeholder="Name" value={newCat.name} onChange={e=>setNewCat({...newCat, name: e.target.value})} />
+            <div style={{display:'flex', gap:4, flexWrap:'wrap'}}>
+              {COLOR_PALETTE.map(col => (
+                <button key={col} type="button" className="swatch" style={{ background: col, outline: newCat.color===col? '2px solid #111' : '1px solid #ccc' }} onClick={()=>setNewCat({...newCat, color: col})} />
+              ))}
+            </div>
+            <button className="btn" onClick={async ()=>{ if(!newCat.name) return; await createCat({ name: newCat.name, color: newCat.color, active: true }); setNewCat({ name: "", color: COLOR_PALETTE[0] }); }}>Create</button>
+          </div>
+
+          {/* List + edit/delete */}
+          <div style={{display:'flex', flexDirection:'column', gap:8, marginTop:10}}>
+            {cats.map(c => {
+              const editing = !!editMap[c.id];
+              const ed = editMap[c.id] || {};
+              return (
+                <div key={c.id} className="row" style={{justifyContent:'space-between', alignItems:'center', gap:8}}>
+                  <div className="row" style={{gap:8, alignItems:'center'}}>
+                    <span className="swatch" style={{ background: editing? ed.color : c.color }} />
+                    {editing ? (
+                      <>
+                        <input className="input" value={ed.name} onChange={e=>setEditMap({...editMap, [c.id]: { ...ed, name: e.target.value }})} />
+                        <div style={{display:'flex', gap:4, flexWrap:'wrap'}}>
+                          {COLOR_PALETTE.map(col => (
+                            <button key={col} type="button" className="swatch" style={{ background: col, outline: ed.color===col? '2px solid #111' : '1px solid #ccc' }} onClick={()=> setEditMap({...editMap, [c.id]: { ...ed, color: col }}) } />
+                          ))}
+                        </div>
+                        <label className="small" style={{display:'flex', alignItems:'center', gap:6}}>
+                          <input type="checkbox" checked={!!ed.active} onChange={(e)=> setEditMap({...editMap, [c.id]: { ...ed, active: e.target.checked }}) } /> Active
+                        </label>
+                      </>
+                    ) : (
+                      <span>{c.name} {c.active? '' : '(inactive)'}</span>
+                    )}
+                  </div>
+                  <div className="row" style={{gap:6}}>
+                    {editing ? (
+                      <>
+                        <button className="btn" onClick={()=>saveEdit(c.id)}>Save</button>
+                        <button className="btn secondary" onClick={()=>cancelEdit(c.id)}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="btn secondary" onClick={()=>startEdit(c)}>Edit</button>
+                        <button className="btn secondary" onClick={async ()=>{ if (confirm('Delete category? Tasks will be unlinked.')) await removeCat(c.id); }}>Delete</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {cats.length===0 && <span className="small">No categories yet</span>}
+          </div>
+        </div>
+
+        {/* Quick add (legacy minimal) */}
         <div className="card" style={{marginTop:16}}>
           <div className="kicker" style={{marginBottom:8}}>Quick Add</div>
           <div className="row" style={{flexWrap:'wrap'}}>
@@ -664,10 +917,10 @@ function ActiveQuests({ hideExtras=false }){
         <div className="card" style={{marginTop:16}}>
           <div className="kicker" style={{marginBottom:8}}>Today</div>
           <div style={{display:'flex', flexDirection:'column', gap:6}}>
-            {list.filter(t=>t.due_date===ymd(anchorDate)).slice(0,6).map(t=> (
+            {filteredList.filter(t=>t.due_date===ymd(anchorDate)).slice(0,6).map(t=> (
               <button key={t.id} className="task-chip" style={{textAlign:'left'}} onClick={()=>openTask(t)}>{t.quest_name}</button>
             ))}
-            {list.filter(t=>t.due_date===ymd(anchorDate)).length===0 && <span className="small">No tasks</span>}
+            {filteredList.filter(t=>t.due_date===ymd(anchorDate)).length===0 && <span className="small">No tasks</span>}
           </div>
         </div>
 
@@ -679,7 +932,7 @@ function ActiveQuests({ hideExtras=false }){
           <h2>Calendar</h2>
         </div>
         <Calendar
-          tasks={list}
+          tasks={filteredList}
           view={view}
           anchorDate={anchorDate}
           onPrev={onPrev}
@@ -689,6 +942,7 @@ function ActiveQuests({ hideExtras=false }){
           onOpenTask={openTask}
           onCreateSelection={onCreateSelection}
           onCreateAtDay={onCreateAtDay}
+          getCategoryColor={getCategoryColor}
         />
 
         {/* Under-calendar table like agenda */}
@@ -704,7 +958,7 @@ function ActiveQuests({ hideExtras=false }){
               </tr>
             </thead>
             <tbody>
-              {list.map(row => (
+              {filteredList.map(row => (
                 <tr key={row.id}>
                   <td>
                     <button className="btn secondary" onClick={()=>openTask(row)} style={{border:'none', background:'transparent', color:'#111', padding:0}}>
@@ -749,9 +1003,10 @@ function ActiveQuests({ hideExtras=false }){
           onDelete={deleteTask}
           onSaveRecurrence={saveRecurrence}
           onRemoveRecurrence={removeRecurrence}
+          categories={cats}
         />
         <DeleteScopeModal open={confirmDelete.open} onClose={()=>setConfirmDelete({ open:false, task:null })} onDeleteOnly={onDeleteOnly} onDeleteAll={onDeleteAll} />
-        <QuickCreateModal open={quick.open} dateStr={quick.dateStr} startMin={quick.startMin} duration={quick.duration} allDay={quick.allDay} onClose={()=>setQuick({...quick, open:false})} onCreate={confirmQuickCreate} />
+        <QuickCreateModal open={quick.open} dateStr={quick.dateStr} startMin={quick.startMin} duration={quick.duration} allDay={quick.allDay} onClose={()=>setQuick({...quick, open:false})} onCreate={confirmQuickCreate} categories={cats} />
       </div>
     </div>
   );
@@ -797,6 +1052,65 @@ function Completed(){
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function Recurring(){
+  const api = useApi();
+  const [list, setList] = useState([]);
+
+  const load = async () => {
+    const { data } = await api.get(`/recurring`);
+    setList(data);
+  };
+  useEffect(()=>{ load(); },[]);
+
+  return (
+    <div className="container">
+      <div className="row" style={{justifyContent:'space-between'}}>
+        <h2>Recurring Rules</h2>
+      </div>
+      <div className="card" style={{marginTop:16}}>
+        <table className="table">
+          <thead>
+            <tr><th>Task</th><th>Rank</th><th>Frequency</th><th>Days</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {list.map(r => (
+              <tr key={r.id}>
+                <td>{r.task_name}</td>
+                <td>{r.quest_rank}</td>
+                <td>{r.frequency}</td>
+                <td>{r.days || '-'}</td>
+                <td>{r.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function Rules(){
+  const api = useApi();
+  const [doc, setDoc] = useState(null);
+  const [val, setVal] = useState("");
+  const load = async () => { const { data } = await api.get(`/rules`); setDoc(data); setVal(data?.content || ""); };
+  const save = async () => { const { data } = await api.put(`/rules`, { content: val }); setDoc(data); };
+  useEffect(()=>{ load(); },[]);
+  return (
+    <div className="container">
+      <div className="row" style={{justifyContent:'space-between'}}>
+        <h2>Rules</h2>
+      </div>
+      <div className="card" style={{marginTop:16}}>
+        <textarea className="input" rows={12} value={val} onChange={e=>setVal(e.target.value)} />
+        <div className="row" style={{marginTop:8, justifyContent:'flex-end'}}>
+          <button className="btn" onClick={save}>Save</button>
+        </div>
       </div>
     </div>
   );
@@ -923,19 +1237,17 @@ function Rewards(){
         <h3 className="kicker">My Redeemed Rewards</h3>
         <table className="table">
           <thead>
-            <tr><th>Date Redeemed</th><th>Reward</th><th>XP Cost</th><th>Status</th><th>Actions</th></tr>
+            <tr><th>Reward</th><th>XP Cost</th><th>Date</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {inventory.filter(i=>!i.used).map(item => (
-              <tr key={item.id}>
-                <td>{fmt(item.date_redeemed)}</td>
-                <td>{item.reward_name}</td>
-                <td>{item.xp_cost}</td>
-                <td>{item.used ? 'Used' : 'Available'}</td>
+            {inventory.map(inv => (
+              <tr key={inv.id}>
+                <td>{inv.reward_name}</td>
+                <td>{inv.xp_cost}</td>
+                <td>{fmt(inv.date_redeemed)}</td>
+                <td>{inv.used? 'Used' : 'Available'}</td>
                 <td>
-                  {!item.used ? (
-                    <button className="btn" onClick={(e)=>useReward(item.id, e)}>Use</button>
-                  ) : null}
+                  {!inv.used ? <button className="btn" onClick={(e)=>useReward(inv.id, e)}>Use</button> : <span className="small">—</span>}
                 </td>
               </tr>
             ))}
@@ -944,99 +1256,21 @@ function Rewards(){
       </div>
 
       <div className="card" style={{marginTop:16}}>
-        <h3 className="kicker">Reward Log</h3>
+        <h3 className="kicker">Redemption Log</h3>
         <table className="table">
           <thead>
-            <tr><th>Date Redeemed</th><th>Reward</th><th>XP Cost</th></tr>
+            <tr><th>Reward</th><th>XP Spent</th><th>Date</th></tr>
           </thead>
           <tbody>
-            {log.map(l => (
-              <tr key={l.id}>
-                <td>{fmt(l.date_redeemed)}</td>
-                <td>{l.reward_name}</td>
-                <td>{l.xp_cost}</td>
+            {log.map(item => (
+              <tr key={item.id}>
+                <td>{item.reward_name}</td>
+                <td>{item.xp_cost}</td>
+                <td>{fmt(item.date_redeemed)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
-
-function Recurring(){
-  const api = useApi();
-  const [rows, setRows] = useState([]);
-  const [form, setForm] = useState({ task_name: "", quest_rank: "Common", frequency: "Daily", days: "", status: "Pending" });
-
-  const load = async () => { const { data } = await api.get(`/recurring`); setRows(data); };
-  useEffect(()=>{ load(); },[]);
-
-  const upsert = async (e) => { e.preventDefault(); await api.post(`/recurring`, form); setForm({ task_name: "", quest_rank: "Common", frequency: "Daily", days: "", status: "Pending" }); await load(); };
-  const del = async (id) => { await api.delete(`/recurring/${id}`); await load(); };
-  const run = async () => { await api.post(`/recurring/run`); };
-
-  return (
-    <div className="container">
-      <div className="row" style={{justifyContent:'space-between'}}>
-        <h2>Recurring Tasks</h2>
-        <button className="btn" onClick={run}>Generate Today's Quests</button>
-      </div>
-
-      <form onSubmit={upsert} className="card" style={{marginTop:16}}>
-        <div className="row">
-          <input className="input" placeholder="Task name" value={form.task_name} onChange={e=>setForm({...form, task_name:e.target.value})} />
-          <select value={form.quest_rank} onChange={e=>setForm({...form, quest_rank:e.target.value})}>{ranks.map(r=><option key={r}>{r}</option>)}</select>
-          <select value={form.frequency} onChange={e=>setForm({...form, frequency:e.target.value})}>
-            {['Daily','Weekly','Weekdays','Monthly'].map(f=> <option key={f}>{f}</option>)}
-          </select>
-          <input className="input" placeholder="Days (Mon, Fri) for Weekly" value={form.days} onChange={e=>setForm({...form, days: e.target.value})} />
-          <select value={form.status} onChange={e=>setForm({...form, status:e.target.value})}>{['Pending','In Progress','Completed','Incomplete'].map(s=> <option key={s}>{s}</option>)}</select>
-          <button className="btn" type="submit">Add</button>
-        </div>
-      </form>
-
-      <div className="card" style={{marginTop:16}}>
-        <table className="table">
-          <thead>
-            <tr><th>Task Name</th><th>Quest Rank</th><th>Frequency</th><th>Days</th><th>Status</th><th>Last Added</th><th>Actions</th></tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.id}>
-                <td>{r.task_name}</td>
-                <td>{r.quest_rank}</td>
-                <td>{r.frequency}</td>
-                <td>{r.days || '-'}</td>
-                <td>{r.status}</td>
-                <td>{r.last_added || '-'}</td>
-                <td><button className="btn secondary" onClick={()=>del(r.id)}>Delete</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function Rules(){
-  const api = useApi();
-  const [rules, setRules] = useState("");
-
-  const load = async () => { const { data } = await api.get(`/rules`); setRules(data?.content || ""); };
-  useEffect(()=>{ load(); },[]);
-
-  const save = async () => { await api.put(`/rules`, { content: rules }); };
-
-  return (
-    <div className="container">
-      <div className="row" style={{justifyContent:'space-between'}}>
-        <h2>Rules</h2>
-        <button className="btn" onClick={save}>Save</button>
-      </div>
-      <div className="card" style={{marginTop:16}}>
-        <textarea rows={10} style={{width:'100%'}} value={rules} onChange={e=>setRules(e.target.value)} />
       </div>
     </div>
   );
@@ -1044,18 +1278,16 @@ function Rules(){
 
 function App(){
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<ActiveQuests />} />
-          <Route path="/completed" element={<Completed />} />
-          <Route path="/rewards" element={<Rewards />} />
-          <Route path="/recurring" element={<Recurring />} />
-          <Route path="/rules" element={<Rules />} />
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<ActiveQuests />} />
+        <Route path="/completed" element={<Completed />} />
+        <Route path="/rewards" element={<Rewards />} />
+        <Route path="/recurring" element={<Recurring />} />
+        <Route path="/rules" element={<Rules />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
