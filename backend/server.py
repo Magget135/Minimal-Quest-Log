@@ -602,6 +602,7 @@ async def run_recurring_generation():
                 status='Pending',
                 redeem_reward=None,
                 recurring_id=t['id'],
+                is_event=False,
             )
             quest_data = serialize_dates_for_mongo(new_q.dict())
             await db.ActiveQuests.insert_one(quest_data)
