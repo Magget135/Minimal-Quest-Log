@@ -517,20 +517,20 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
     ends = task.get('ends') or 'never'
     if ends == 'on_date':
         until = task.get('until_date')
-        if until and today &gt; until:
+        if until and today > until:
             return False
     if ends == 'after':
         cnt = int(task.get('count') or 0)
-        if cnt and occurrences &gt;= cnt:
+        if cnt and occurrences >= cnt:
             return False
 
     if freq == 'Daily':
         # every N days
         delta_days = (today - start).days
-        return delta_days &gt;= 0 and delta_days % max(1, interval) == 0
+        return delta_days >= 0 and delta_days % max(1, interval) == 0
 
     if freq == 'Weekdays':
-        return today.weekday() &lt; 5
+        return today.weekday() < 5
 
     if freq == 'Weekly':
         # every N weeks on selected days
@@ -542,7 +542,7 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
         if today.weekday() not in indices:
             return False
         weeks = ((today - start).days) // 7
-        return weeks &gt;= 0 and weeks % max(1, interval) == 0
+        return weeks >= 0 and weeks % max(1, interval) == 0
 
     if freq == 'Monthly':
         monthly_mode = task.get('monthly_mode') or ('date' if task.get('monthly_on_date') else None)
@@ -554,7 +554,7 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
                 return False
             # Check interval by months difference from start
             m = months_between(start, today)
-            if m &lt; 0 or (m % max(1, interval)) != 0:
+            if m < 0 or (m % max(1, interval)) != 0:
                 return False
             day = nth_weekday_day(today.year, today.month, wd_idx, idx)
             return today.day == day
@@ -562,13 +562,13 @@ def is_today_for_task(today: date, task: Dict[str, Any]) -> bool:
             # by date
             target_day = int(task.get('monthly_on_date') or start.day)
             m = months_between(start, today)
-            if m &lt; 0 or (m % max(1, interval)) != 0:
+            if m < 0 or (m % max(1, interval)) != 0:
                 return False
             return today.day == target_day
 
     if freq == 'Annual':
         y = years_between(start, today)
-        if y &lt; 0 or (y % max(1, interval)) != 0:
+        if y < 0 or (y % max(1, interval)) != 0:
             return False
         return (today.month, today.day) == (start.month, start.day)
 
