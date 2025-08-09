@@ -216,6 +216,7 @@ class CategoriesHolidaysTester:
                     for expected_name in expected_names:
                         if expected_name not in found_names:
                             all_valid = False
+                            print(f"   Missing expected holiday: {expected_name}")
                             break
                     
                     # Check date format (ISO strings)
