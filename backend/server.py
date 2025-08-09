@@ -257,7 +257,7 @@ async def update_active_quest(quest_id: str, input: ActiveQuestUpdate):
     input_dict = input.dict(exclude_unset=True)
     update = {}
     for k, v in input_dict.items():
-        if k in ("due_time", "category_id"):
+        if k in ("due_time", "category_id", "is_event"):
             update[k] = v
         elif v is not None:
             update[k] = v
