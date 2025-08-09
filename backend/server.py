@@ -763,6 +763,7 @@ async def seed_holidays_2025():
     cat = await ensure_holidays_category()
     created = 0
     skipped = 0
+    linked = 0
     for h in HOLIDAYS_2025:
         qname = h["name"]
         qdate = h["date"].isoformat()
@@ -773,8 +774,33 @@ async def seed_holidays_2025():
             "category_id": cat.id,
         })
         if existing:
-            skipped += 1
+            # ensure it has an Annual recurrence linked
+            if not existing.get("recurring_id"):
+                new_rec = RecurringTask(
+                    task_name=existing["quest_name"],
+                    quest_rank=existing["quest_rank"],
+                    frequency='Annual',
+                    days=None,
+                    monthly_on_date=None,
+                    interval=1,
+                    monthly_mode=None,
+                    monthly_week_index=None,
+                    monthly_weekday=None,
+                    ends='never',
+                    until_date=None,
+                    count=None,
+                    status=existing.get("status") or 'Pending',
+                    start_date=h["date"],
+                    category_id=cat.id,
+                    is_event=True,
+                )
+                await db.Recurringtasks.insert_one(serialize_dates_for_mongo(new_rec.dict()))
+                await db.ActiveQuests.update_one({"id": existing["id"]}, {"$set": {"recurring_id": new_rec.id}})
+                linked += 1
+            else:
+                skipped += 1
             continue
+        # create new event
         new_q = ActiveQuest(
             quest_name=qname,
             quest_rank='Common',
@@ -788,8 +814,29 @@ async def seed_holidays_2025():
             is_event=True,
         )
         await db.ActiveQuests.insert_one(serialize_dates_for_mongo(new_q.dict()))
+        # create and link Annual recurrence
+        new_rec = RecurringTask(
+            task_name=new_q.quest_name,
+            quest_rank=new_q.quest_rank,
+            frequency='Annual',
+            days=None,
+            monthly_on_date=None,
+            interval=1,
+            monthly_mode=None,
+            monthly_week_index=None,
+            monthly_weekday=None,
+            ends='never',
+            until_date=None,
+            count=None,
+            status=new_q.status,
+            start_date=h["date"],
+            category_id=cat.id,
+            is_event=True,
+        )
+        await db.Recurringtasks.insert_one(serialize_dates_for_mongo(new_rec.dict()))
+        await db.ActiveQuests.update_one({"id": new_q.id}, {"$set": {"recurring_id": new_rec.id}})
         created += 1
-    return {"created": created, "skipped": skipped, "category_id": cat.id}
+    return {"created": created, "skipped": skipped, "linked": linked, "category_id": cat.id}
 
 # Include the router in the main app
 app.include_router(api_router)
