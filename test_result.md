@@ -90,6 +90,18 @@ backend:
         agent: "testing"
         comment: "Review validation completed successfully. All 5 specific tests passed: 1) Create active quest with duration_minutes=90 and verify field persists in GET /api/quests/active ✅, 2) PATCH /api/quests/active/{id} to change due_time=16:45 and duration_minutes=120, verified ✅, 3a) PUT /api/quests/active/{id}/recurrence with Weekly config (Mon,Wed,Fri), then GET returns same config ✅, 3b) DELETE /api/quests/active/{id}/recurrence?delete_rule=true unlinks quest and deletes rule; GET returns null and rule removed from Recurringtasks ✅, 4) POST /api/recurring/run works and sets recurring_id on generated quests ✅. Fixed TypeError in is_today_for_task function where start_date string wasn't being converted to date object. No 5xx errors detected after fix."
   - task: "Categories API endpoints (CRUD operations)"
+  - task: "Categories + Holidays 2025 (backend)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Categories CRUD added; ActiveQuests supports category_id; Holidays 2025 list + idempotent seeding endpoints working; unlink on category delete verified."
+
     implemented: true
     working: true
     file: "/app/backend/server.py"
