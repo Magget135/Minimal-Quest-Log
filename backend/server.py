@@ -419,7 +419,7 @@ def nth_weekday_day(year: int, month: int, weekday_idx: int, n: int) -> int:
     while d.month == month:
         if d.weekday() == weekday_idx:
             days.append(d.day)
-        d = d.replace(day=d.day + 1) if d.day &lt; 28 else (d + datetime.resolution).date()  # fallback
+        d = d.replace(day=d.day + 1) if d.day < 28 else (d + datetime.resolution).date()  # fallback
         try:
             d = date(d.year, d.month, d.day)
         except Exception:
